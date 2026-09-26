@@ -85,16 +85,18 @@ main{max-width:1680px;padding:28px 28px 42px}
 }
 
 
-#detectionOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
-#detectionOverlay polygon{fill:#ffdc35;fill-opacity:.5;stroke:#ffdc35;stroke-width:1.5;stroke-linejoin:round}
-#featureDialog{color:var(--ink);background:var(--panel);border:1px solid var(--yellow);border-radius:12px;max-width:min(430px,90vw);padding:22px}
+#extentOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+#extentOverlay polygon{fill:#ffdc35;fill-opacity:.5;stroke:#ffdc35;stroke-width:1.5;stroke-linejoin:round}
+#extentOverlay polyline{fill:none;stroke:#ffdc35;stroke-width:1.5}
+#extentOverlay circle{fill:#ffdc35;stroke:#111925;stroke-width:1.5}
+#featureDialog{color:var(--ink);background:var(--panel);border:1px solid var(--yellow);border-radius:12px;max-width:min(450px,90vw);padding:22px}
 #featureDialog::backdrop{background:#0007}
 #featureDialog h3{margin-top:0}#featureDialogInfo{font-size:13px;color:var(--muted)}
-#smartControls label{display:block;margin:10px 0 5px}
-#smartControls .row button{font-size:11px;padding:8px 5px}
-#smartStatus{min-height:34px}
-#canvas{cursor:grab}#canvas:active{cursor:grabbing}
-body[data-mesh-busy=true] #pointLoading{display:flex}
+#extentStatus{min-height:34px}#extentActions button{font-size:11px;padding:8px 6px}
+#canvas{cursor:grab}#canvas:active{cursor:grabbing}#canvas.selecting-extent{cursor:crosshair}
+.symbology-options{display:flex;gap:12px;align-items:center}.symbology-options select{flex:1;min-width:0}
+#dsmPalettePreview{flex:0 0 100px;height:16px;border:1px solid #8491a3;border-radius:4px}
+#dsmStatus:empty{display:none}
 
 </style></head><body><main>
 <header><h1>Surface and Feature Modeling</h1></header>
@@ -102,10 +104,10 @@ body[data-mesh-busy=true] #pointLoading{display:flex}
 <input id="temporaryFile" type="file" hidden>
 <div id="temporaryTools" class="temporary-tools" hidden><span id="temporaryStatus" role="status" aria-live="polite"></span><button id="cancelTemporary" type="button" hidden>Cancel</button><button id="clearTemporary" type="button" hidden>Clear Temporary File</button></div>
 
-<div id="error" role="alert"></div><dialog id="featureDialog" aria-labelledby="featureDialogTitle"><h3 id="featureDialogTitle"></h3><p id="featureDialogInfo"></p><div class="row"><button id="seeFeature" type="button">See Feature</button><button id="closeFeature" type="button">Close</button></div></dialog>
+<div id="error" role="alert"></div><dialog id="featureDialog" aria-labelledby="featureDialogTitle"><h3 id="featureDialogTitle"></h3><p id="featureDialogInfo"></p><div class="row"><button id="takeCloserLook" type="button">Take Closer Look</button><button id="closeFeature" type="button">Close</button></div></dialog>
 <div class="workspace"><section class="scene-card" aria-label="Interactive object view">
 <div class="scene-head"><h2 id="objectTitle"></h2><div class="scene-actions"><button id="showFit" type="button" aria-pressed="false">Fit Shape: Off</button><button id="play" type="button" aria-pressed="true">Play: On</button></div></div>
-<div class="scene" id="scene"><canvas id="canvas" aria-label="Rotating three-dimensional point cloud"></canvas><svg id="detectionOverlay" aria-label="Detected feature candidates"></svg><svg id="measureOverlay" aria-hidden="true"></svg><div id="pointLoading" class="loading-overlay" role="status"><span class="spinner" aria-hidden="true"></span>Loading...</div>
+<div class="scene" id="scene"><canvas id="canvas" tabindex="0" aria-label="Interactive three-dimensional point cloud" aria-describedby="extentStatus"></canvas><svg id="extentOverlay" aria-label="Selected point-cloud extent"></svg><svg id="measureOverlay" aria-hidden="true"></svg><div id="pointLoading" class="loading-overlay" role="status"><span class="spinner" aria-hidden="true"></span>Loading...</div>
 <div class="readout"><div id="levelReadout"></div><div id="removedReadout"></div><div id="countReadout"></div></div><div id="modelBadge"></div><div id="fitReadout"></div><div id="pickHint"></div></div></section>
 <aside class="controls" aria-label="Viewer controls">
 <div class="control-group"><div class="control-label">Decimation Method</div><div class="segments" id="methods"><button data-method="random" aria-pressed="true">Random</button><button data-method="voxel" aria-pressed="false">Voxel</button><button data-method="thinning" aria-pressed="false">Thinning</button></div>
@@ -113,23 +115,13 @@ body[data-mesh-busy=true] #pointLoading{display:flex}
 <div class="control-group"><div class="control-label">Rotation Speed</div><div class="segments" id="speeds" aria-label="Rotation speed"><button data-speed="0.1" aria-pressed="false">0.10x</button><button data-speed="0.2" aria-pressed="true">0.20x</button><button data-speed="0.3" aria-pressed="false">0.30x</button><button data-speed="0.4" aria-pressed="false">0.40x</button></div>
 <label class="control-label" for="elevation" style="margin-top:15px">Viewing Height <output id="elevationValue"></output></label><input id="elevation" type="range" min="-10" max="85" step="1" value="10">
 <label class="control-label" for="azimuth">Viewing Angle <output id="azimuthValue"></output></label><input id="azimuth" type="range" min="0" max="360" step="1" value="0"><button class="full" id="reset" style="font-size:12px">Reset View</button></div>
-<div class="control-group"><div class="control-label">Feature Representation</div><div class="row" style="margin-top:0"><button id="replica" aria-pressed="false">3D Replica</button><button id="texturedMesh" aria-pressed="false">Textured Mesh</button></div><div class="row"><button id="colorToggle" aria-pressed="true">Color: On</button><button id="intensityToggle" aria-pressed="false">Intensity: Off</button></div>
+<div class="control-group"><div class="control-label">Feature Representation</div><div class="row" style="margin-top:0"><button id="replica" aria-pressed="false">3D Replica</button></div><div class="row"><button id="colorToggle" aria-pressed="true">Color: On</button><button id="intensityToggle" aria-pressed="false">Intensity: Off</button></div>
 <label id="lodLabel" class="control-label" for="lod" style="margin-top:14px">Level of Development</label><select id="lod" class="full" disabled><option value="100" selected>LOD 100 · Base Geometry</option><option value="200">LOD 200 · Structural Detail</option><option value="300">LOD 300 · Components</option><option value="400">LOD 400 · Fine Detail</option><option value="500">LOD 500 · Highest Detail</option></select><p id="representationNote" class="small" role="status" aria-live="polite"></p><details id="materialReference" hidden><summary class="small">Material Reference</summary><img id="materialReferenceImage" alt="Photographic material reference" style="max-width:100%;max-height:190px;display:block;margin-top:8px"></details></div>
 <div class="control-group"><label class="control-label" for="measure">Measurements</label><select class="full" id="measure"><option value="off">Measurements Off</option><option value="distance">Point to Point Distance</option><option value="polyline">Polyline Length</option><option value="volume">Polygon Volume</option></select><div id="volumeControls" hidden><label class="small" for="volumeBase">Base Height Above Object Minimum (m)</label><input id="volumeBase" type="number" value="0" step="0.01" class="full"><label class="small" for="volumeCell">Surface Grid (cm)</label><input id="volumeCell" type="number" value="2" min="0.1" max="1000" step="0.1" class="full"><p class="small">Click at least three points around a footprint. Volume uses the observed upper surface above the horizontal base. Empty cells remain unmeasured.</p></div><div id="measurementValue" aria-live="polite"></div><div class="row"><button id="undo">Undo</button><button id="clear">Clear</button></div></div>
-<div class="control-group" id="smartControls">
-<div class="control-label">Smart Detection</div>
-<div class="row" style="margin-top:0"><button id="smartToggle" type="button" aria-pressed="false">Smart Detection: Off</button><button id="highlightToggle" type="button" aria-pressed="true">Highlight: On</button></div>
-<label class="small" for="smartClass">Feature Class</label>
-<select id="smartClass" class="full">
-<option value="Aerial Panel Target">Aerial Panel Target</option>
-<option value="Non-Terrain/Ground Only">Non-Terrain/Ground Only</option>
-<option value="Roadway">Roadway</option>
-<option value="Roadway Lane">Roadway Lane</option>
-<option value="Terrain/Ground Only">Terrain/Ground Only</option>
-<option value="Traffic Cone" selected>Traffic Cone</option>
-<option value="Utility">Utility</option>
-</select>
-<p id="smartStatus" class="small" role="status" aria-live="polite">Identify candidates using classifications, geometry, and color.</p>
+<div class="control-group" id="extentControls">
+<button id="selectExtent" class="full" type="button" aria-pressed="false">Select Extent</button>
+<div id="extentActions" hidden><div class="row"><button id="undoExtent" type="button">Undo Vertex</button><button id="finishExtent" type="button">Finish Selection</button></div><button id="cancelExtent" class="full" style="margin-top:8px" type="button">Cancel Selection</button></div>
+<p id="extentStatus" class="small" role="status" aria-live="polite">Draw a polygon to inspect selected points.</p>
 </div>
 </aside></div>
 
@@ -157,7 +149,7 @@ body[data-mesh-busy=true] #pointLoading{display:flex}
 <aside class="controls" aria-label="Change detection controls">
 <div class="control-group">
 <label class="control-label" for="dsmResolution">Raster Resolution <output id="dsmResolutionValue">30.00 cm</output></label><input id="dsmResolution" type="range" min="0" max="2" step="1" value="2"><div class="range-ends"><span>10.00 cm</span><span>15.00 cm</span><span>30.00 cm</span></div>
-<label class="control-label" for="dsmUnits" style="margin-top:14px">Source Unit <output id="dsmUnitsValue">Meters</output></label><input id="dsmUnits" type="range" min="0" max="1" step="1" value="0" aria-valuetext="Meters"><div class="range-ends"><span>Meters</span><span>Centimeters</span></div>
+<label class="control-label" for="dsmUnits" style="margin-top:14px">Source Units <output id="dsmUnitsValue">Meters</output></label><input id="dsmUnits" type="range" min="0" max="1" step="1" value="0" aria-valuetext="Meters"><div class="range-ends"><span>Meters</span><span>Centimeters</span></div>
 <button id="dsmRun" class="full" style="margin-top:14px">Rasterize &amp; Difference</button></div>
 <div class="control-group">
 <label class="check"><input id="dsmFilter" type="checkbox">Apply Uncertainty Thresholds (95% CL)</label>
@@ -166,12 +158,12 @@ body[data-mesh-busy=true] #pointLoading{display:flex}
 </div>
 <div class="control-group"><label class="control-label" for="dsmNoise">Vertical Precision Degradation <output id="dsmNoiseValue">0.00 cm</output></label><input id="dsmNoise" type="range" min="0" max="50" step="1" value="0"><div class="range-ends"><span>0.00 cm</span><span>50.00 cm</span></div></div>
 <div class="control-group">
-<label class="small" for="dsmLayer">Map Layer</label><select id="dsmLayer" class="full"><option value="survey1">Survey 1</option><option value="survey2">Survey 2</option><option value="dod" selected>DoD (Standard)</option><option value="propagated">DoD with Error Propagation</option></select>
-<label class="small" for="dsmPalette">Map Symbology</label><select id="dsmPalette" class="full"><option value="diverging">Blue-White-Red</option><option value="bwr">BWR</option><option value="cividis">Cividis</option><option value="coolwarm">Cool to Warm</option><option value="plasma">Plasma</option><option value="precipitation">Precipitation</option><option value="PRGn">PRGN</option><option value="seismic">Seismic</option><option value="viridis">Viridis</option></select>
+<label class="small" for="dsmLayer">Feature to Visualize</label><select id="dsmLayer" class="full"><option value="survey1">Survey 1</option><option value="survey2">Survey 2</option><option value="dod" selected>DoD (Standard)</option><option value="propagated">DoD with Error Propagation</option></select>
+<label class="small" for="dsmPalette">Symbology</label><div class="symbology-options"><select id="dsmPalette" class="full"><option value="diverging">Blue-White-Red</option><option value="bwr">BWR</option><option value="cividis">Cividis</option><option value="coolwarm">Cool to Warm</option><option value="plasma">Plasma</option><option value="precipitation">Precipitation</option><option value="PRGn">PRGN</option><option value="seismic">Seismic</option><option value="viridis">Viridis</option></select><div id="dsmPalettePreview" role="img" aria-label="Symbology color preview"></div></div>
 <label class="check" style="margin-top:10px"><input id="dsmColorblind" type="checkbox">Colorblind Safe</label></div>
-<div class="control-group"><label class="control-label" for="dsmMetricUnits">Display Unit <output id="dsmMetricUnitsValue">Meters</output></label><input id="dsmMetricUnits" type="range" min="0" max="1" step="1" value="0" aria-valuetext="Meters"><div class="range-ends"><span>Meters</span><span>Centimeters</span></div></div>
+<div class="control-group"><label class="control-label" for="dsmMetricUnits">Display Units <output id="dsmMetricUnitsValue">Meters</output></label><input id="dsmMetricUnits" type="range" min="0" max="1" step="1" value="0" aria-valuetext="Meters"><div class="range-ends"><span>Meters</span><span>Centimeters</span></div></div>
 </aside></div>
-<p id="dsmStatus" role="status" aria-live="polite">All analysis runs locally in browser memory. No files are uploaded.</p>
+<p id="dsmStatus" role="status" aria-live="polite"></p>
 <div id="dsmMetrics" class="dsm-tables"></div>
 <dialog id="dsmErrorDialog"><h3>Assessment Error</h3><p id="dsmErrorMessage"></p><form method="dialog"><button>Close</button></form></dialog>
 </section>
@@ -469,14 +461,15 @@ function fitBox(xyz){
 }
 // RGB is carried in linear-light space through averaging/interpolation, then
 // converted to sRGB for display. Intensity uses one source-wide 2–98% stretch.
-function sourceAppearance(rgb,intensity,count){
+function sourceAppearance(rgb,intensity,count,preserved=null){
   let rgbMax=0,minI=65535,maxI=0;const histogram=new Uint32Array(65536);
   if(rgb)for(const v of rgb)rgbMax=Math.max(rgbMax,v);
   for(const v of intensity){histogram[v]++;minI=Math.min(minI,v);maxI=Math.max(maxI,v);}
   function percentile(p){const rank=(count-1)*p,a=Math.floor(rank),b=Math.ceil(rank);let sum=0,va=null,vb=null;
     for(let j=minI;j<=maxI;j++){sum+=histogram[j];if(va===null&&sum>a)va=j;if(sum>b){vb=j;break;}}return va+(vb-va)*(rank-a);}
   let low=percentile(.02),high=percentile(.98);if(high<=low){low=minI;high=maxI;}
-  const scale=rgbMax<=255?255:65535,hasColor=!!rgb&&rgbMax>0,hasIntensity=maxI>minI,attributes=new Float32Array(count*4);
+  if(preserved?.intensityRange)[low,high]=preserved.intensityRange;
+  const scale=preserved?.rgbScale||(rgbMax<=255?255:65535),hasColor=preserved?.hasColor??(!!rgb&&rgbMax>0),hasIntensity=preserved?.hasIntensity??(maxI>minI),attributes=new Float32Array(count*4);
   for(let i=0;i<count;i++){for(let k=0;k<3;k++){const s=hasColor?rgb[3*i+k]/scale:.75;attributes[4*i+k]=s<=.04045?s/12.92:((s+.055)/1.055)**2.4;}
     attributes[4*i+3]=high>low?Math.max(0,Math.min(1,(intensity[i]-low)/(high-low))):.5;}
   return {attributes,hasColor,hasIntensity,intensityRange:[low,high],rgbScale:scale};
@@ -531,9 +524,9 @@ function finishCloud(xyz,rgb,intensity,classes,meta={}){
  let radius=0,cxx=0,cyy=0,cxy=0,mx=0,my=0;
  for(let i=0;i<xyz.length;i+=3){for(let k=0;k<3;k++)xyz[i+k]-=origin[k];mx+=xyz[i];my+=xyz[i+1];radius=Math.max(radius,Math.hypot(xyz[i],xyz[i+1],xyz[i+2]));}
  mx/=count;my/=count;for(let i=0;i<xyz.length;i+=3){const x=xyz[i]-mx,y=xyz[i+1]-my;cxx+=x*x;cyy+=y*y;cxy+=x*y;}
- const angle=.5*Math.atan2(2*cxy,cxx-cyy),c=Math.cos(angle),s=Math.sin(angle),appearance=sourceAppearance(rgb,intensity||new Uint16Array(count),count);
+ const angle=.5*Math.atan2(2*cxy,cxx-cyy),c=Math.cos(angle),s=Math.sin(angle),appearance=sourceAppearance(rgb,intensity||new Uint16Array(count),count,importOptions.appearance);
  radius=Math.max(radius,.001);const distance=4*radius;
- original=xyz;originalAttributes=appearance.attributes;originalClasses=classes||new Uint8Array(count);originalIntensity=intensity;resetSmartCache();
+ original=xyz;originalAttributes=appearance.attributes;originalClasses=classes||new Uint8Array(count);originalIntensity=intensity;extentCache=null;
  cloud={sourceName:importOptions.name,hasColor:appearance.hasColor,hasIntensity:appearance.hasIntensity,intensityRange:appearance.intensityRange,rgbScale:appearance.rgbScale,sourceCount:count,origin,sourceBounds:[lo.map((v,k)=>v-origin[k]),hi.map((v,k)=>v-origin[k])],basis:[[c,-s,0],[s,c,0],[0,0,1]],distance,viewRadius:1.18*radius/Math.sqrt(1-(radius/distance)**2),unitNote:settings.note,unitFactors:settings.factors,geographicOrigin:settings.geographicOrigin||null,metricVerified:!!meta.known,attributes:{rgb:rgb?'source':'neutral fallback',intensity:intensity?'source':'neutral fallback',classification:classes?'source':'unavailable'}};
  randomOrder=null;spatialOrder=null;current=null;postMessage({type:'loaded',cloud});
 }
@@ -557,9 +550,10 @@ const aliases={x:['x','easting','longitude','lon'],y:['y','northing','latitude',
 function mapping(names){return Object.fromEntries(Object.entries(aliases).map(([key,values])=>[key,names.findIndex(n=>values.includes(fieldName(n)))]));}
 function allocateRecords(count,names){if(!Number.isSafeInteger(count)||count<1)throw Error('Invalid point count.');const map=mapping(names);if([map.x,map.y,map.z].some(i=>i<0))throw Error('Point cloud requires X, Y and Z coordinate fields.');return {map,xyz:new Float64Array(count*3),rgb:map.r>=0&&map.g>=0&&map.b>=0?new Float64Array(count*3):null,intensity:map.i>=0?new Float64Array(count):null,classes:map.c>=0?new Uint8Array(count):null};}
 function putRecord(out,row,i){const m=out.map;for(let k=0;k<3;k++){const v=Number(row[[m.x,m.y,m.z][k]]);if(!Number.isFinite(v))throw Error('Invalid XYZ value at point '+(i+1));out.xyz[3*i+k]=v;}if(out.rgb)for(let k=0;k<3;k++){const v=Number(row[[m.r,m.g,m.b][k]]);if(!Number.isFinite(v)||v<0||v>65535)throw Error('Invalid RGB value at point '+(i+1));out.rgb[3*i+k]=v;}if(out.intensity){const v=Number(row[m.i]);if(!Number.isFinite(v))throw Error('Invalid intensity at point '+(i+1));out.intensity[i]=v;}if(out.classes){const v=Number(row[m.c]);if(!Number.isInteger(v)||v<0||v>255)throw Error('Invalid classification at point '+(i+1));out.classes[i]=v;}}
-function finishRecords(out,meta){if(out.rgb){let max=0;for(const x of out.rgb)max=Math.max(max,x);if(max>0&&max<=1)for(let i=0;i<out.rgb.length;i++)out.rgb[i]*=65535;}
+function finishRecords(out,meta){if(out.rgb){let max=0;for(const x of out.rgb)max=Math.max(max,x);if(!importOptions.appearance&&max>0&&max<=1)for(let i=0;i<out.rgb.length;i++)out.rgb[i]*=65535;}
  // General formats allow floating/signed intensity; normalize to the LAS display domain.
- if(out.intensity){let lo=Infinity,hi=-Infinity;for(const x of out.intensity){lo=Math.min(lo,x);hi=Math.max(hi,x);}const a=new Uint16Array(out.intensity.length);for(let i=0;i<a.length;i++)a[i]=hi>lo?Math.round((out.intensity[i]-lo)/(hi-lo)*65535):0;out.intensity=a;}
+ if(out.intensity&&importOptions.appearance){out.intensity=Uint16Array.from(out.intensity);}
+ else if(out.intensity){let lo=Infinity,hi=-Infinity;for(const x of out.intensity){lo=Math.min(lo,x);hi=Math.max(hi,x);}const a=new Uint16Array(out.intensity.length);for(let i=0;i<a.length;i++)a[i]=hi>lo?Math.round((out.intensity[i]-lo)/(hi-lo)*65535):0;out.intensity=a;}
  finishCloud(out.xyz,out.rgb,out.intensity,out.classes,meta);
 }
 function* lines(text){let start=0;while(start<text.length){let end=text.indexOf('\n',start);if(end<0)end=text.length;yield text.slice(start,end).trim();start=end+1;}}
@@ -588,7 +582,7 @@ function readPCD(buffer){const {header,offset}=binaryHeader(buffer,/DATA\s+\w+\s
  else throw Error('Compressed PCD requires conversion to binary/ascii PCD or LAS.');finishRecords(out,textMetadata(header));
 }
 function readJSONCloud(buffer){const value=JSON.parse(new TextDecoder().decode(buffer)),rows=Array.isArray(value)?value:value.points||value.xyz||value.positions;if(!Array.isArray(rows)||!rows.length)throw Error('JSON requires a points, xyz or positions array.');const flat=typeof rows[0]==='number',arrays=Array.isArray(rows[0]);if(flat&&rows.length%3)throw Error('XYZ array length must be divisible by three.');const names=flat?['x','y','z']:arrays?(value.fields||['x','y','z','red','green','blue','intensity','classification']):Object.keys(rows[0]);const out=allocateRecords(flat?rows.length/3:rows.length,names.slice(0,flat?3:arrays?rows[0].length:names.length));for(let i=0;i<out.xyz.length/3;i++)putRecord(out,flat?rows.slice(i*3,i*3+3):arrays?rows[i]:names.map(k=>rows[i][k]),i);finishRecords(out,value.units?{units:value.units,known:true}:{});}
-async function ingestFile(m){importOptions={units:m.units||'auto',vertical:m.vertical||'auto',name:m.name||''};const head=new TextDecoder().decode(new Uint8Array(m.buffer,0,Math.min(256,m.buffer.byteLength))).trimStart();if(head.startsWith('LASF'))return readCloud(m.buffer);if(/^ply\s/.test(head))return readPLY(m.buffer);if(/(?:#\s*\.PCD|VERSION\s+0\.|FIELDS\s+x)/i.test(head))return readPCD(m.buffer);if(/^[\[{]/.test(head))return readJSONCloud(m.buffer);if(/\.(e57|copc|bin|obj|pcap)$/i.test(m.name||''))throw Error('Unsupported point-cloud encoding. Export LAS/LAZ, PLY, PCD, XYZ/CSV/TXT, PTS or JSON.');return readTextCloud(m.buffer,m.name);}
+async function ingestFile(m){importOptions={units:m.units||'auto',vertical:m.vertical||'auto',name:m.name||'',appearance:m.appearance};const head=new TextDecoder().decode(new Uint8Array(m.buffer,0,Math.min(256,m.buffer.byteLength))).trimStart();if(head.startsWith('LASF'))return readCloud(m.buffer);if(/^ply\s/.test(head))return readPLY(m.buffer);if(/(?:#\s*\.PCD|VERSION\s+0\.|FIELDS\s+x)/i.test(head))return readPCD(m.buffer);if(/^[\[{]/.test(head))return readJSONCloud(m.buffer);if(/\.(e57|copc|bin|obj|pcap)$/i.test(m.name||''))throw Error('Unsupported point-cloud encoding. Export LAS/LAZ, PLY, PCD, XYZ/CSV/TXT, PTS or JSON.');return readTextCloud(m.buffer,m.name);}
 
 function replicaMesh(fit,lod){
   const divisions={200:6,300:12,400:24,500:40};let resolution=divisions[lod],cells,steps;const lo=fit.part.lo,hi=fit.part.hi,span=hi.map((v,k)=>v-lo[k]),longest=Math.max(...span),xyz=fit.local;
@@ -746,17 +740,12 @@ function vertexAppearance(body,fit,sampled){
 
 function makeState(message){
  if(!cloud)throw Error('Choose a temporary point cloud first.');const {method,level,lod,mode,id}=message;
- if(!['random','voxel','thinning'].includes(method)||!Number.isInteger(level)||level<0||level>100||![100,200,300,400,500].includes(lod)||!['points','replica','mesh'].includes(mode))throw Error('Invalid viewer settings.');
+ if(!['random','voxel','thinning'].includes(method)||!Number.isInteger(level)||level<0||level>100||![100,200,300,400,500].includes(lod)||!['points','replica'].includes(mode))throw Error('Invalid viewer settings.');
  const sampled=sample(method,level),count=sampled.xyz.length/3;
  let fit=null,fitted=[],replica=null,detail=null;
- if(count&&(mode==='replica'||mode==='mesh'||message.showFit)){
+ if(count&&(mode==='replica'||message.showFit)){
   if(!sampled.fit)sampled.fit=fitBox(sampled.xyz);fit=sampled.fit;
   if(message.showFit&&mode==='points'){progress('Fitting enclosing component surfaces…');if(!sampled.envelope)sampled.envelope=adaptiveEnvelope(fit,300);fitted=sampled.envelope;}
-  if(mode==='mesh'){
-   progress('Reconstructing a textured surface…');
-   if(!sampled.texturedMesh)sampled.texturedMesh=makeTexturedMesh(sampled.xyz,sampled.attributes);
-   replica=[sampled.texturedMesh];detail={cellSize:sampled.texturedMesh.cellSize,note:cloud.hasColor?'Surface colored from source RGB.':'No RGB available; neutral surface shading.'};
-  }
   if(mode==='replica'){
    progress('Building LOD '+lod+' geometry…');
    if(!sampled.replicaCache||sampled.replicaCache.lod!==lod){
@@ -796,164 +785,78 @@ async function streamTemporaryLAS(file,first){
 }
 async function ingestBrowserFile(m){
  if(m.file.size>CLOUD_FILE_LIMIT&&!m.internal)throw Error(CLOUD_FILE_LIMIT_MESSAGE);
- importOptions={units:m.units||'auto',vertical:m.vertical||'auto',name:m.name||m.file.name};
+ importOptions={units:m.units||'auto',vertical:m.vertical||'auto',name:m.name||m.file.name,appearance:m.appearance};
  const first=await m.file.slice(0,Math.min(m.file.size,1048576)).arrayBuffer();
  if(first.byteLength>=227&&textAt(first,0,4)==='LASF')return streamTemporaryLAS(m.file,first);
  return ingestFile({...m,buffer:await m.file.arrayBuffer()});
 }
-function exportSmartFeature(m){
- if(!smartCache||smartCache.featureClass!==m.featureClass)throw Error('Run detection again before inspecting this feature.');
- const feature=smartCache.features.find(f=>f.id===m.featureId);if(!feature)throw Error('This feature is no longer available.');
- const count=feature.count;if(!count)throw Error('No source points remain in this feature.');
- const header=new TextEncoder().encode('ply\nformat binary_little_endian 1.0\ncomment units m\nelement vertex '+count+'\nproperty double x\nproperty double y\nproperty double z\nproperty ushort red\nproperty ushort green\nproperty ushort blue\nproperty ushort intensity\nproperty uchar classification\nend_header\n');
- const buffer=new ArrayBuffer(header.length+count*33),bytes=new Uint8Array(buffer);bytes.set(header);const view=new DataView(buffer),origin=cloud.origin||[0,0,0];
- const srgb=x=>x<=.0031308?12.92*x:1.055*x**(1/2.4)-.055;
- let j=0;for(let i=0;i<original.length/3;i++){if(smartPointFeature(i)!==feature.id)continue;const p=header.length+j++*33;for(let k=0;k<3;k++){view.setFloat64(p+k*8,original[i*3+k]+origin[k],true);view.setUint16(p+24+k*2,Math.round(Math.max(0,Math.min(1,srgb(originalAttributes[i*4+k])))*65535),true);}view.setUint16(p+30,originalIntensity?originalIntensity[i]:Math.round(originalAttributes[i*4+3]*65535),true);view.setUint8(p+32,originalClasses?.[i]||0);}
- if(j!==count)throw Error('The selected feature changed. Run detection again.');
- postMessage({type:'featureExport',id:m.id,name:feature.type+' '+feature.id+'.ply',feature,buffer,count},[buffer]);
+// Extents are polygons in the captured camera view. Test every source point,
+// including points omitted by display decimation and points behind other points.
+let extentCache=null;
+function extentContains(polygon,x,y){
+ let inside=false;
+ for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+  const a=polygon[j],b=polygon[i],dx=b[0]-a[0],dy=b[1]-a[1];
+  if(Math.abs(dx*(y-a[1])-dy*(x-a[0]))<1e-10&&x>=Math.min(a[0],b[0])-1e-10&&x<=Math.max(a[0],b[0])+1e-10&&y>=Math.min(a[1],b[1])-1e-10&&y<=Math.max(a[1],b[1])+1e-10)return true;
+  if((a[1]>y)!==(b[1]>y)&&x<dx*(y-a[1])/dy+a[0])inside=!inside;
+ }
+ return inside;
 }
+function sourceInExtent(i,selection){
+ const {view,polygon}=selection,x=original[3*i]-view.pan[0],y=original[3*i+1]-view.pan[1],z=original[3*i+2]-view.pan[2];
+ const dot=b=>x*b[0]+y*b[1]+z*b[2],depth=dot(view.basis[2]),w=1-depth/view.distance;
+ // Match the renderer's homogeneous clipping plane as well as its projection.
+ if(w<=0||Math.abs(depth/view.distance)>w)return false;
+ return extentContains(polygon,dot(view.basis[0])/view.half[0]/w,dot(view.basis[1])/view.half[1]/w);
+}
+function selectSourceExtent(m){
+ extentCache=null;
+ if(!original||!cloud)throw Error('Load a point cloud before selecting an extent.');
+ if(!Array.isArray(m.polygon)||m.polygon.length<3||m.polygon.some(p=>p.length!==2||!p.every(Number.isFinite)))throw Error('Draw a polygon with at least three corners.');
+ const v=m.view;
+ if(!v||v.basis?.length!==3||v.basis.some(b=>b.length!==3||!b.every(Number.isFinite))||v.pan?.length!==3||!v.pan.every(Number.isFinite)||v.half?.length!==2||!v.half.every(x=>Number.isFinite(x)&&x>0)||!Number.isFinite(v.distance)||v.distance<=0)throw Error('The selection view is invalid. Select the extent again.');
+ const selection={id:m.id,polygon:m.polygon,view:v,count:0};
+ progress('Counting selected source points…');
+ for(let i=0;i<original.length/3;i++)if(sourceInExtent(i,selection))selection.count++;
+ extentCache=selection;
+ postMessage({type:'extentSelected',id:m.id,count:selection.count});
+}
+function exportSourceExtent(m){
+ const selection=extentCache;
+ if(!selection||selection.id!==m.selectionId)throw Error('Select the extent again before opening it.');
+ const count=selection.count;if(!count)throw Error('The selected extent contains no source points.');
+ const header=new TextEncoder().encode('ply\nformat binary_little_endian 1.0\ncomment units m\nelement vertex '+count+'\nproperty double x\nproperty double y\nproperty double z\nproperty ushort red\nproperty ushort green\nproperty ushort blue\nproperty ushort intensity\nproperty uchar classification\nend_header\n');
+ const buffer=new ArrayBuffer(header.length+count*33);new Uint8Array(buffer).set(header);
+ const data=new DataView(buffer),origin=cloud.origin||[0,0,0],rgbScale=cloud.rgbScale||65535;
+ const srgb=x=>x<=.0031308?12.92*x:1.055*x**(1/2.4)-.055;
+ progress('Preparing the selected source points…');
+ let j=0;
+ for(let i=0;i<original.length/3;i++){
+  if(!sourceInExtent(i,selection))continue;const p=header.length+j++*33;
+  for(let k=0;k<3;k++){
+   data.setFloat64(p+k*8,original[i*3+k]+origin[k],true);
+   data.setUint16(p+24+k*2,Math.round(Math.max(0,Math.min(1,srgb(originalAttributes[i*4+k])))*rgbScale),true);
+  }
+  data.setUint16(p+30,originalIntensity?.[i]||0,true);data.setUint8(p+32,originalClasses?.[i]||0);
+ }
+ if(j!==count)throw Error('The source changed. Select the extent again.');
+ const appearance={rgbScale,hasColor:cloud.hasColor,hasIntensity:cloud.hasIntensity,intensityRange:cloud.intensityRange};
+ postMessage({type:'extentExport',id:m.id,buffer,count,appearance},[buffer]);
+}
+
 self.onmessage=async event=>{
  const m=event.data;
  try{
   if(m.type==='file'){if(m.file)await ingestBrowserFile(m);else await ingestFile(m);}
   else if(m.type==='state')makeState(m);
   else if(m.type==='seed'){
-   original=m.coordinates;originalAttributes=m.attributes;originalClasses=m.classes||new Uint8Array(original.length/3);originalIntensity=null;
-   const b=bounds(original);cloud={...m.cloud,sourceCount:original.length/3,sourceBounds:[b.lo,b.hi],basis:m.cloud.basis||identity,origin:m.cloud.origin||[0,0,0]};current=null;randomOrder=null;spatialOrder=null;resetSmartCache();postMessage({type:'seeded',id:m.id});
+   original=m.coordinates;originalAttributes=m.attributes;originalClasses=m.classes||new Uint8Array(original.length/3);originalIntensity=m.intensity||null;
+   const b=bounds(original);cloud={...m.cloud,sourceCount:original.length/3,sourceBounds:[b.lo,b.hi],basis:m.cloud.basis||identity,origin:m.cloud.origin||[0,0,0]};current=null;randomOrder=null;spatialOrder=null;extentCache=null;postMessage({type:'seeded',id:m.id});
   }
-  else if(m.type==='detect'){const result=detectSmartFeatures(m.featureClass);postMessage({type:'detection',id:m.id,...result});}
-  else if(m.type==='extract')exportSmartFeature(m);
-  else if(m.type==='mesh'){
-   const sampled=sample(m.method||'random',m.level||0),mesh=makeTexturedMesh(sampled.xyz,sampled.attributes);
-   postMessage({type:'mesh',id:m.id,mesh,count:sampled.xyz.length/3});
-  }
+  else if(m.type==='selectExtent')selectSourceExtent(m);
+  else if(m.type==='exportExtent')exportSourceExtent(m);
  }catch(error){postMessage({type:'error',operation:m.type,id:m.id,message:error instanceof RangeError?'Insufficient browser memory for this operation. The file size is within the upload limit; try a smaller cloud or greater decimation.':typeof error==='number'?'The compressed LAZ stream could not be decoded.':error.message||String(error)});}
 };
-
-let smartCache=null,smartTerrain=null;
-function resetSmartCache(){smartCache=null;smartTerrain=null;}
-const smartClasses=['Aerial Panel Target','Non-Terrain/Ground Only','Roadway','Roadway Lane','Terrain/Ground Only','Traffic Cone','Utility'];
-function smartTerrainGrid(){
- if(smartTerrain)return smartTerrain;
- const [lo,hi]=cloud.sourceBounds,area=Math.max(.01,(hi[0]-lo[0])*(hi[1]-lo[1])),cell=Math.max(.5,Math.sqrt(area/80000)),grid=new Map();
- for(let i=0;i<original.length;i+=3){const x=Math.floor(original[i]/cell),y=Math.floor(original[i+1]/cell),key=x+','+y,z=original[i+2],c=grid.get(key);if(!c)grid.set(key,{x,y,z});else c.z=Math.min(c.z,z);}
- for(const c of grid.values()){c.floor=c.z;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const n=grid.get((c.x+dx)+','+(c.y+dy));if(n)c.floor=Math.min(c.floor,n.z);}}
- const small=Math.max(hi[0]-lo[0],hi[1]-lo[1])<4;
- smartTerrain={cell,grid,base:lo[2],small};return smartTerrain;
-}
-function smartHeight(i){
- const t=smartTerrain,x=original[i*3],y=original[i*3+1],z=original[i*3+2];if(t.small)return z-t.base;
- const ix=Math.floor(x/t.cell),iy=Math.floor(y/t.cell),floor=t.grid.get(ix+','+iy)?.floor;
- return z-(Number.isFinite(floor)?floor:t.base);
-}
-function smartCandidate(i,type){
- const cls=originalClasses?.[i]||0;if(cls===7||cls===18)return false;
- const h=smartHeight(i),ground=cls===2||cls===11||(cls<=1&&h<=.16+smartTerrain.cell*.08);
- if(type==='Terrain/Ground Only')return ground;
- if(type==='Non-Terrain/Ground Only')return !ground;
- if(type==='Traffic Cone')return cls!==2&&cls!==11&&h>=.03&&h<=1.8;
- if(type==='Utility')return !ground&&h>=.35;
- if(type==='Roadway')return cls===11||ground;
- if(!ground)return false;
- const a=i*4,r=originalAttributes[a],g=originalAttributes[a+1],b=originalAttributes[a+2];
- const white=cloud.hasColor&&Math.min(r,g,b)>.48, yellow=cloud.hasColor&&r>.40&&g>.28&&b<Math.min(r,g)*.55;
- const reflective=cloud.hasIntensity&&originalAttributes[a+3]>.88;
- return type==='Roadway Lane'?(white||yellow||(!cloud.hasColor&&reflective)):(white||(!cloud.hasColor&&reflective));
-}
-function smartHull(points){
- const sorted=points.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(sorted.length<3)return sorted;
- const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
- const lower=[],upper=[];for(const p of sorted){while(lower.length>1&&cross(lower.at(-2),lower.at(-1),p)<=0)lower.pop();lower.push(p);}for(const p of sorted.reverse()){while(upper.length>1&&cross(upper.at(-2),upper.at(-1),p)<=0)upper.pop();upper.push(p);}lower.pop();upper.pop();return lower.concat(upper);
-}
-function smartShape(cells,cell,type){
- let count=0;const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity],center=[0,0,0];
- for(const c of cells){count+=c.n;for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],c.lo[k]);hi[k]=Math.max(hi[k],c.hi[k]);center[k]+=c.sum[k];}}
- for(let k=0;k<3;k++)center[k]/=count;
- const span=hi.map((v,k)=>v-lo[k]);let xx=0,yy=0,xy=0;
- for(const c of cells){const x=c.sum[0]/c.n-center[0],y=c.sum[1]/c.n-center[1];xx+=x*x*c.n;yy+=y*y*c.n;xy+=x*y*c.n;}
- const angle=.5*Math.atan2(2*xy,xx-yy),co=Math.cos(angle),si=Math.sin(angle),uv=cells.map(c=>{const x=c.sum[0]/c.n-center[0],y=c.sum[1]/c.n-center[1];return [co*x+si*y,-si*x+co*y];});
- let u0=Infinity,u1=-Infinity,v0=Infinity,v1=-Infinity;for(const [u,v] of uv){u0=Math.min(u0,u);u1=Math.max(u1,u);v0=Math.min(v0,v);v1=Math.max(v1,v);}
- const length=Math.max(u1-u0,v1-v0)+cell,width=Math.min(u1-u0,v1-v0)+cell;
- let accept=count>=6;
- if(type==='Traffic Cone'){
-  let low=0,high=0,nlow=0,nhigh=0;for(const c of cells){const z=c.sum[2]/c.n,rad=Math.hypot(c.sum[0]/c.n-center[0],c.sum[1]/c.n-center[1]);if(z<lo[2]+span[2]*.4){low+=rad*c.n;nlow+=c.n;}if(z>lo[2]+span[2]*.7){high+=rad*c.n;nhigh+=c.n;}}
-  accept=accept&&span[2]>=.20&&span[2]<=1.6&&length>=.1&&length<=1.25&&width/length>.35&&nlow>0&&nhigh>0&&high/nhigh<low/nlow*.82;
- }else if(type==='Utility'){
-  const axes=[0,1,2].sort((a,b)=>span[b]-span[a]),a=axes[0],b=axes[1];
-  const hull=smartHull(cells.map(c=>[c.sum[a]/c.n,c.sum[b]/c.n]));let area=0;for(let j=0;j<hull.length;j++){const p=hull[j],q=hull[(j+1)%hull.length];area+=p[0]*q[1]-p[1]*q[0];}
-  const rectangularity=Math.abs(area)/2/Math.max(1e-8,span[a]*span[b]);
-  accept=accept&&span[a]>=.25&&span[b]>=.15&&rectangularity>=.65;
- }else if(type==='Roadway Lane')accept=accept&&length>=.5&&width<=.8&&length/width>=3&&span[2]<.55;
- else if(type==='Aerial Panel Target')accept=accept&&length>=.2&&length<=2.5&&width>=.15&&length/width<2.8&&span[2]<.25;
- else if(type==='Roadway')accept=count>=25&&length>=3&&width>=1.5&&span[2]<Math.max(.35,length*.10);
- const pad=Math.max(.025,cell*.55),boxLo=lo.map(v=>v-pad),boxHi=hi.map(v=>v+pad);
- return {accept,count,lo:boxLo,hi:boxHi,center,length,width};
-}
-function detectSmartFeatures(featureClass){
- if(!cloud||!original)throw Error('Load a point cloud before starting Smart Detection.');
- if(!smartClasses.includes(featureClass))throw Error('Unknown Smart Detection feature class.');
- if(smartCache?.featureClass===featureClass)return {features:smartCache.features,featureClass,resolution:smartCache.cell};
- progress('Finding '+featureClass+' candidates…');smartTerrainGrid();
- let cell=featureClass==='Traffic Cone'?.075:featureClass==='Aerial Panel Target'||featureClass==='Roadway Lane'?.10:featureClass==='Utility'?.15:.45;
- const flat=['Roadway','Roadway Lane','Aerial Panel Target','Terrain/Ground Only'].includes(featureClass);let grid;
- for(;;){
-  grid=new Map();let overflow=false;
-  for(let i=0;i<original.length/3;i++){
-   if(!smartCandidate(i,featureClass))continue;
-   const p=[original[i*3],original[i*3+1],original[i*3+2]],q=p.map(v=>Math.floor(v/cell+1e-9));if(flat)q[2]=0;const key=q.join(',');let c=grid.get(key);
-   if(!c){if(grid.size>=160000){overflow=true;break;}c={key,q,n:0,sum:[0,0,0],lo:p.slice(),hi:p.slice(),feature:0};grid.set(key,c);}
-   c.n++;for(let k=0;k<3;k++){c.sum[k]+=p[k];c.lo[k]=Math.min(c.lo[k],p[k]);c.hi[k]=Math.max(c.hi[k],p[k]);}
-  }
-  if(!overflow)break;cell*=1.6;
- }
- const features=[],visited=new Set();
- for(const initial of grid.values()){
-  if(visited.has(initial.key))continue;visited.add(initial.key);const queue=[initial];
-  for(let at=0;at<queue.length;at++){const c=queue[at];for(let dz=flat?0:-1;dz<= (flat?0:1);dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-   if(!dx&&!dy&&!dz)continue;const key=[c.q[0]+dx,c.q[1]+dy,c.q[2]+dz].join(','),next=grid.get(key);if(next&&!visited.has(key)){visited.add(key);queue.push(next);}
-  }}
-  const shape=smartShape(queue,cell,featureClass);if(!shape.accept)continue;
-  const id=features.length+1;features.push({id,type:featureClass,...shape});for(const c of queue)c.feature=id;
- }
- smartCache={featureClass,features,cell,flat,grid};
- return {features,featureClass,resolution:cell};
-}
-function smartPointFeature(i){
- if(!smartCandidate(i,smartCache.featureClass))return 0;
- const q=[0,1,2].map(k=>Math.floor(original[i*3+k]/smartCache.cell+1e-9));if(smartCache.flat)q[2]=0;
- return smartCache.grid.get(q.join(','))?.feature||0;
-}
-
-function makeTexturedMesh(xyz,attributes){
- if(xyz.length<9)throw Error('Textured Mesh needs at least three points on a connected surface.');
- const bound=bounds(xyz),span=bound.hi.map((v,k)=>v-bound.lo[k]),extent=Math.max(...span,1e-6),area=Math.max(span[0]*span[1],span[0]*span[2],span[1]*span[2],1e-10);
- let cell=Math.max(extent/2048,1.6*Math.sqrt(area/(xyz.length/3))),cells;
- for(;;){cells=new Map();let overflow=false;for(let i=0;i<xyz.length/3;i++){
-  const q=[0,1,2].map(k=>Math.floor((xyz[i*3+k]-bound.lo[k])/cell)),key=q.join(',');let c=cells.get(key);
-  if(!c){if(cells.size>=90000){overflow=true;break;}c={q,n:0,p:[0,0,0],rgb:[0,0,0],id:cells.size};cells.set(key,c);}
-  c.n++;for(let k=0;k<3;k++){c.p[k]+=xyz[i*3+k];c.rgb[k]+=attributes[i*4+k];}
- }if(!overflow)break;cell*=1.4;}
- const vertices=[],colors=[],normals=[],faces=[],seen=new Set(),srgb=v=>v<=.0031308?12.92*v:1.055*v**(1/2.4)-.055;
- for(const c of cells.values()){vertices.push(c.p.map(v=>v/c.n));colors.push(c.rgb.map(v=>srgb(v/c.n)));normals.push([0,0,0]);}
- function neighbor(c,axis,a,b,da,db){let best=null,distance=Infinity;for(let dz=-1;dz<=1;dz++){const q=c.q.slice();q[a]+=da;q[b]+=db;q[axis]+=dz;const candidate=cells.get(q.join(','));if(candidate){const d=Math.hypot(...vsub(vertices[c.id],vertices[candidate.id]));if(d<distance){best=candidate;distance=d;}}}return best;}
- function face(a,b,c,axis){if(!a||!b||!c||a.id===b.id||b.id===c.id||a.id===c.id)return;
-  const p=vertices[a.id],q=vertices[b.id],r=vertices[c.id],ab=vsub(q,p),ac=vsub(r,p),normal=vcross(ab,ac),area=Math.hypot(...normal);
-  if(area<cell*cell*.015||Math.abs(normal[axis])/area<.58||Math.max(Math.hypot(...ab),Math.hypot(...ac),Math.hypot(...vsub(q,r)))>cell*2.8)return;
-  const key=[a.id,b.id,c.id].sort((x,y)=>x-y).join(',');if(seen.has(key))return;seen.add(key);const ids=normal[axis]<0?[a.id,c.id,b.id]:[a.id,b.id,c.id];faces.push(ids);
- }
- for(const c of cells.values())for(let axis=0;axis<3;axis++){
-  const a=(axis+1)%3,b=(axis+2)%3,e=neighbor(c,axis,a,b,1,0),n=neighbor(c,axis,a,b,0,1),d=neighbor(c,axis,a,b,1,1);
-  if(e&&n&&d){face(c,e,d,axis);face(c,d,n,axis);}else if(e&&n)face(c,e,n,axis);else if(e&&d)face(c,e,d,axis);else if(n&&d)face(c,d,n,axis);
- }
- if(!faces.length)throw Error('No connected surface could be reconstructed. Use a denser point cloud or less decimation.');
- // A small, nonshrinking smoothing pass preserves measured detail while
- // eliminating voxel seams. Never bridge an unsupported hole or component.
- const neighbors=vertices.map(()=>new Set());for(const f of faces)for(let k=0;k<3;k++){neighbors[f[k]].add(f[(k+1)%3]);neighbors[f[k]].add(f[(k+2)%3]);}
- for(const factor of [.18,-.185]){const next=vertices.map((p,i)=>{const ids=neighbors[i];if(ids.size<3)return p;const avg=[0,0,0];for(const id of ids)for(let k=0;k<3;k++)avg[k]+=vertices[id][k]/ids.size;return p.map((v,k)=>v+(avg[k]-v)*factor);});for(let i=0;i<vertices.length;i++)vertices[i]=next[i];}
- for(const f of faces){const n=vcross(vsub(vertices[f[1]],vertices[f[0]]),vsub(vertices[f[2]],vertices[f[0]]));for(const i of f)for(let k=0;k<3;k++)normals[i][k]+=n[k];}
- for(let i=0;i<normals.length;i++)normals[i]=vunit(normals[i]);
- return {kind:'mesh',tag:'textured-surface',basis:identity,center:[0,0,0],vertices,faces,paths:[],normals,vertexColors:colors,color:[.75,.75,.75],cellSize:cell,synthetic:false};
-}
 
 
 </script>
@@ -1217,7 +1120,7 @@ const CLOUD_FILE_LIMIT_MESSAGE='File must not exceed 500 MB (524,288,000 bytes).
 const state={object:0,method:'random',level:0,speed:.20,elevation:10,azimuth:0,zoom:1,pan:[0,0,0],playing:true,mode:'points',lod:100,showFit:false,measure:'off',color:true,intensity:false};
 const YELLOW=[1,.84,.10],GRAY=[.79,.82,.86];let pointAttributes=new Float32Array();let points=new Float32Array(),parts=[],triangles=[],wire=[],measurements=[],activeRecord=null,half=[1,1],basis=[],lastTime=0,frameCount=0,drawCount=0;
 function decode(text,Type){const bytes=Uint8Array.from(atob(text),c=>c.charCodeAt(0));return new Type(bytes.buffer)}
-for(const o of objects){if(o.cloudBytes){o.sourceCount=o.pointCount;o.hasColor=true;o.hasIntensity=true;continue;}o.coordinates=decode(o.xyz,Float64Array);o.randomIndices=decode(o.randomOrder,Uint32Array);o.thinningIndices=decode(o.thinningOrder,Uint32Array);const appearance=sourceAppearance(o.rgb16?decode(o.rgb16,Uint16Array):null,decode(o.intensity16,Uint16Array),o.sourceCount);Object.assign(o,appearance);delete o.rgb16;delete o.intensity16;delete o.xyz;delete o.randomOrder;delete o.thinningOrder;}
+for(const o of objects){if(o.cloudBytes){o.sourceCount=o.pointCount;o.hasColor=true;o.hasIntensity=true;continue;}o.coordinates=decode(o.xyz,Float64Array);o.randomIndices=decode(o.randomOrder,Uint32Array);o.thinningIndices=decode(o.thinningOrder,Uint32Array);const appearance=sourceAppearance(o.rgb16?decode(o.rgb16,Uint16Array):null,(o.sourceIntensity=decode(o.intensity16,Uint16Array)),o.sourceCount);Object.assign(o,appearance);delete o.rgb16;delete o.intensity16;delete o.xyz;delete o.randomOrder;delete o.thinningOrder;}
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,t)=>a.map(v=>v*t),dot=(a,b)=>a.reduce((v,x,i)=>v+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],length=a=>Math.hypot(...a),unit=a=>mul(a,1/(length(a)||1));
 function world(p,q){return p.center.map((c,i)=>c+p.basis[i][0]*q[0]+p.basis[i][1]*q[1]+p.basis[i][2]*q[2])}
 function interpolate(z,zs,rs){if(z<=zs[0])return rs[0];for(let i=1;i<zs.length;i++)if(z<=zs[i])return rs[i-1]+(rs[i]-rs[i-1])*(z-zs[i-1])/(zs[i]-zs[i-1]);return rs.at(-1)}
@@ -1274,14 +1177,15 @@ function dataFor(o,record){if(!record.count)return new Float32Array();const xyz=
  const cells=new Map(),v=record.voxelSize,origin=o.voxelOrigin;for(let i=0;i<xyz.length;i+=3){const x=xyz[i],y=xyz[i+1],z=xyz[i+2],key=Math.floor((x-origin[0])/v)+','+Math.floor((y-origin[1])/v)+','+Math.floor((z-origin[2])/v);let c=cells.get(key);if(c){c[0]+=x;c[1]+=y;c[2]+=z;c[3]++;}else cells.set(key,[x,y,z,1]);}if(cells.size!==record.count)throw Error('Voxel occupancy does not match the fitted dataset.');const a=new Float32Array(cells.size*3);let j=0;for(const c of cells.values()){a[j++]=c[0]/c[3];a[j++]=c[1]/c[3];a[j++]=c[2]/c[3];}return a;}
 // RGB is carried in linear-light space through averaging/interpolation, then
 // converted to sRGB for display. Intensity uses one source-wide 2–98% stretch.
-function sourceAppearance(rgb,intensity,count){
+function sourceAppearance(rgb,intensity,count,preserved=null){
   let rgbMax=0,minI=65535,maxI=0;const histogram=new Uint32Array(65536);
   if(rgb)for(const v of rgb)rgbMax=Math.max(rgbMax,v);
   for(const v of intensity){histogram[v]++;minI=Math.min(minI,v);maxI=Math.max(maxI,v);}
   function percentile(p){const rank=(count-1)*p,a=Math.floor(rank),b=Math.ceil(rank);let sum=0,va=null,vb=null;
     for(let j=minI;j<=maxI;j++){sum+=histogram[j];if(va===null&&sum>a)va=j;if(sum>b){vb=j;break;}}return va+(vb-va)*(rank-a);}
   let low=percentile(.02),high=percentile(.98);if(high<=low){low=minI;high=maxI;}
-  const scale=rgbMax<=255?255:65535,hasColor=!!rgb&&rgbMax>0,hasIntensity=maxI>minI,attributes=new Float32Array(count*4);
+  if(preserved?.intensityRange)[low,high]=preserved.intensityRange;
+  const scale=preserved?.rgbScale||(rgbMax<=255?255:65535),hasColor=preserved?.hasColor??(!!rgb&&rgbMax>0),hasIntensity=preserved?.hasIntensity??(maxI>minI),attributes=new Float32Array(count*4);
   for(let i=0;i<count;i++){for(let k=0;k<3;k++){const s=hasColor?rgb[3*i+k]/scale:.75;attributes[4*i+k]=s<=.04045?s/12.92:((s+.055)/1.055)**2.4;}
     attributes[4*i+3]=high>low?Math.max(0,Math.min(1,(intensity[i]-low)/(high-low))):.5;}
   return {attributes,hasColor,hasIntensity,intensityRange:[low,high],rgbScale:scale};
@@ -1380,15 +1284,15 @@ function twinMaterial(part,name,lod){
 }
 
 function buildGeometry(){
- parts=state.mode==='mesh'?(objects[state.object].temporary?temporaryReplica||[]:builtinTexturedParts||[]):fittedParts(activeRecord).map(p=>state.mode==='replica'?twinMaterial(p,objects[state.object].sourceName||objects[state.object].slug,state.lod):p);triangles=[];wire=[];const mesh=[],replica=state.mode!=='points',lod=state.lod;
- for(const part of parts){const m=state.mode==='mesh'?makeMesh(part,64):replica?refinedMesh(part,{100:64,200:72,300:96,400:128,500:192}[lod],objects[state.object].temporary?0:lod===500?2:lod>=300?1:0):makeMesh(part,64),color=part.color||REPLICA_COLOR;
+ parts=fittedParts(activeRecord).map(p=>state.mode==='replica'?twinMaterial(p,objects[state.object].sourceName||objects[state.object].slug,state.lod):p);triangles=[];wire=[];const mesh=[],replica=state.mode!=='points',lod=state.lod;
+ for(const part of parts){const m=replica?refinedMesh(part,{100:64,200:72,300:96,400:128,500:192}[lod],objects[state.object].temporary?0:lod===500?2:lod>=300?1:0):makeMesh(part,64),color=part.color||REPLICA_COLOR;
   for(const f of m.faces){const v=f.map(i=>m.vertices[i]),normal=unit(cross(sub(v[1],v[0]),sub(v[2],v[0])));triangles.push(v);for(const i of f){const n=part.normals?unit([0,1,2].map(k=>part.basis[k][0]*part.normals[i][0]+part.basis[k][1]*part.normals[i][1]+part.basis[k][2]*part.normals[i][2])):normal;mesh.push(...m.vertices[i],...n,...(part.vertexColors?.[i]||color),part.material||0);}}
   if(!replica)for(const path of m.paths)for(let i=1;i<path.length;i++)wire.push([m.vertices[path[i-1]],m.vertices[path[i]]]);
  }
  const lines=[];for(const [a,b] of wire)for(const [end,side] of [[0,-1],[1,-1],[1,1],[0,-1],[1,1],[0,1]])lines.push(...a,...b,end,side);
  meshCount=mesh.length/10;lineCount=lines.length/8;gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mesh),gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lines),gl.STATIC_DRAW);
 }
-function upload(clear=true){const o=objects[state.object];if(state.mode==='mesh'&&!o.temporary){requestBuiltinMesh(clear);return;}if(o.temporary)return requestTemporaryState(clear);activeRecord=o.modes[state.method][state.level];points=dataFor(o,activeRecord);pointAttributes=appearanceFor(o,activeRecord);uploadPointBuffer();buildGeometry();if(clear)measurements=[];syncUI();render();}
+function upload(clear=true){const o=objects[state.object];if(o.temporary)return requestTemporaryState(clear);activeRecord=o.modes[state.method][state.level];points=dataFor(o,activeRecord);pointAttributes=appearanceFor(o,activeRecord);uploadPointBuffer();buildGeometry();if(clear)measurements=[];syncUI();render();}
 
 function camera(){const az=state.azimuth*Math.PI/180,el=state.elevation*Math.PI/180;const right=[-Math.sin(az),Math.cos(az),0],toward=[Math.cos(az)*Math.cos(el),Math.sin(az)*Math.cos(el),Math.sin(el)];basis=[right,cross(toward,right),toward];const aspect=canvas.clientWidth/canvas.clientHeight,r=objects[state.object].viewRadius/state.zoom;half=aspect>=1?[r*aspect,r]:[r,r/aspect];}
 function project(p){p=sub(p,state.pan);const depth=dot(p,basis[2]),w=1-depth/objects[state.object].distance;return [(dot(p,basis[0])/half[0]/w+1)*canvas.clientWidth/2,(1-dot(p,basis[1])/half[1]/w)*canvas.clientHeight/2,depth];}
@@ -1396,7 +1300,7 @@ function render(){if(!gl||!pointProgram)return;const dpr=Math.min(window.deviceP
  if(state.mode==='points'&&points.length){cameraUniforms(pointProgram);disableAttributes();gl.bindBuffer(gl.ARRAY_BUFFER,pointBuffer);attribute(pointProgram,'a_position',3,28,0);attribute(pointProgram,'a_color',3,28,12);attribute(pointProgram,'a_intensity',1,28,24);appearanceUniforms(pointProgram);gl.uniform1f(gl.getUniformLocation(pointProgram,'u_pointSize'),2.15*dpr);gl.drawArrays(gl.POINTS,0,points.length/3);drawCount++;}
  if(state.mode!=='points'&&meshCount){cameraUniforms(meshProgram);disableAttributes();gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);attribute(meshProgram,'a_position',3,40,0);attribute(meshProgram,'a_normal',3,40,12);attribute(meshProgram,'a_color',3,40,24);attribute(meshProgram,'a_material',1,40,36);gl.uniform1f(gl.getUniformLocation(meshProgram,'u_detail'),state.mode==='replica'&&state.lod>=400?1:0);gl.drawArrays(gl.TRIANGLES,0,meshCount);drawCount++;}
  if(state.mode==='points'&&state.showFit&&lineCount){cameraUniforms(lineProgram);disableAttributes();gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);attribute(lineProgram,'a_start',3,32,0);attribute(lineProgram,'a_end',3,32,12);attribute(lineProgram,'a_corner',2,32,24);gl.uniform2f(gl.getUniformLocation(lineProgram,'u_pixels'),width,height);gl.uniform1f(gl.getUniformLocation(lineProgram,'u_width'),2.5*dpr);gl.uniform3fv(gl.getUniformLocation(lineProgram,'u_color'),YELLOW);gl.drawArrays(gl.TRIANGLES,0,lineCount);drawCount++;}
- drawOverlay();drawSmartOverlay();frameCount++;}
+ drawOverlay();drawExtentOverlay();frameCount++;}
 function measurementResult(){if(measurements.length<2)return 0;let distance=0;for(let i=1;i<measurements.length;i++)distance+=length(sub(measurements[i],measurements[i-1]));return distance*100;}
 function drawOverlay(){const w=canvas.clientWidth,h=canvas.clientHeight,svg=$('measureOverlay');svg.setAttribute('viewBox',`0 0 ${w} ${h}`);let html='';{const cmPerPixel=2*half[0]/w*100,target=95*cmPerPixel,power=10**Math.floor(Math.log10(target)),cm=[1,2,5,10].map(n=>n*power).find(n=>n>=target)||10*power,pixels=cm/cmPerPixel,x=w-pixels-22,y=h-28;html+=`<g stroke="#aebaca" stroke-width="1.2"><path d="M${x} ${y-5}V${y}H${x+pixels}V${y-5}"/><path d="M${x+pixels/2} ${y}v-4"/></g><text id="rulerLabel" x="${x+pixels/2}" y="${y-12}" text-anchor="middle">${Number(cm.toPrecision(3))} cm</text>`;}
  const screen=measurements.map(project);if(screen.length){html+=`<polyline points="${screen.map(p=>p.slice(0,2).join(',')).join(' ')}" fill="none" stroke="#99d9ff" stroke-width="2"/>`;for(const p of screen)html+=`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#c7edff" stroke="#11283b" stroke-width="2"/>`;if(screen.length>1){const p=screen.at(-1);html+=`<text class="measurement-label" x="${Math.max(15,Math.min(w-100,p[0]+12))}" y="${Math.max(20,Math.min(h-50,p[1]-12))}">${measurementResult().toFixed(2)} cm</text>`;}}
@@ -1412,26 +1316,40 @@ function syncUI(){const o=objects[state.object];
  if(referenceKey&&materialReferences[referenceKey]&&$('materialReferenceImage').src!==materialReferences[referenceKey])$('materialReferenceImage').src=materialReferences[referenceKey];
 syncAppearance();$('objectTitle').textContent=o.title;$('levelReadout').textContent='Decimation: '+Number((100*(1-activeRecord.count/o.sourceCount)).toFixed(2))+'%'+(Math.abs(100*(1-activeRecord.count/o.sourceCount)-state.level)>.01?' (target '+state.level+'%)':'');$('countReadout').textContent=`No. of Points: ${activeRecord.count.toLocaleString('en-US')}`;$('fitReadout').textContent=state.mode!=='points'?`${(meshCount/3).toLocaleString()} triangles`+(activeRecord.detail?.cellSize?` · Surface Cell ${activeRecord.detail.cellSize.toFixed(2)} m`:''):state.showFit?(activeRecord.supported?(o.temporary?`Fitted Envelope: ${activeRecord.parameters.dimensions_m?.map(v=>v.toFixed(2)).join(' × ')||''} m`:`Fit RMS: ${activeRecord.rmsCm.toFixed(2)} cm`):'Fit Unsupported'):'';
  $('fitReadout').title=o.temporary?'Restored fitted component envelopes.':'Original object-specific fitted surfaces.';
- $('decimation').value=state.level;$('decimationValue').textContent=state.level+'%';document.querySelectorAll('[data-speed]').forEach(b=>{b.setAttribute('aria-pressed',Number(b.dataset.speed)===state.speed);b.disabled=state.measure!=='off';});$('elevation').value=Math.round(state.elevation);$('elevationValue').textContent=state.elevation.toFixed(2)+'\u00b0';$('azimuth').value=Math.round((state.azimuth+360)%360);$('azimuthValue').textContent=((state.azimuth+360)%360).toFixed(2)+'\u00b0';$('play').textContent=state.playing?'Play: On':'Rotation: Off';$('play').setAttribute('aria-pressed',String(state.playing));$('play').disabled=state.measure!=='off';$('replica').setAttribute('aria-pressed',state.mode==='replica');$('texturedMesh').setAttribute('aria-pressed',state.mode==='mesh');$('showFit').textContent=state.showFit?'Fit Shape: On':'Fit Shape: Off';$('showFit').setAttribute('aria-pressed',String(state.showFit));$('showFit').disabled=state.mode!=='points';$('lod').value=String(state.lod);$('lod').disabled=state.mode!=='replica';$('measure').value=state.measure;$('undo').disabled=$('clear').disabled=!measurements.length;
- $('modelBadge').textContent=state.mode==='mesh'?'Textured Mesh':state.mode==='replica'?`LOD ${state.lod}`:'';
+ $('decimation').value=state.level;$('decimationValue').textContent=state.level+'%';document.querySelectorAll('[data-speed]').forEach(b=>{b.setAttribute('aria-pressed',Number(b.dataset.speed)===state.speed);b.disabled=state.measure!=='off';});$('elevation').value=Math.round(state.elevation);$('elevationValue').textContent=state.elevation.toFixed(2)+'\u00b0';$('azimuth').value=Math.round((state.azimuth+360)%360);$('azimuthValue').textContent=((state.azimuth+360)%360).toFixed(2)+'\u00b0';$('play').textContent=state.playing?'Play: On':'Rotation: Off';$('play').setAttribute('aria-pressed',String(state.playing));$('play').disabled=state.measure!=='off';$('replica').setAttribute('aria-pressed',state.mode==='replica');$('showFit').textContent=state.showFit?'Fit Shape: On':'Fit Shape: Off';$('showFit').setAttribute('aria-pressed',String(state.showFit));$('showFit').disabled=state.mode!=='points';$('lod').value=String(state.lod);$('lod').disabled=state.mode!=='replica';$('measure').value=state.measure;$('undo').disabled=$('clear').disabled=!measurements.length;
+ $('modelBadge').textContent=state.mode==='replica'?`LOD ${state.lod}`:'';
  $('lodLabel').textContent=o.temporary?'Level of Detail':'Level of Development';
  const descriptions={100:'Base Geometry · Former LOD 300',200:'Sharper Structure · Edges and Rims',300:'Functional Details · Connections and Components',400:'Fine Geometry · Profiles and Protective Hardware',500:'Highest Detail · Scan Surface and Finishing Hardware'};
- $('representationNote').textContent=state.mode==='mesh'?(o.hasColor?'Smooth surface colored from source RGB.':'Smooth surface with neutral shading; RGB is unavailable.')+' '+(activeRecord.detail?.cellSize?'Surface resolution: '+activeRecord.detail.cellSize.toPrecision(3)+' m.':''):state.mode==='replica'?descriptions[state.lod]+(o.temporary?' · '+(activeRecord.detail?.note||'Preparing geometry…'):''):'';
- $('modelBadge').title=state.mode==='mesh'?'Surface reconstructed from the input points; appearance uses source RGB.':'LOD 400/500 use reference-inspired materials. Added markings and hardware are illustrative, not surveyed attributes.';
+ $('representationNote').textContent=state.mode==='replica'?descriptions[state.lod]+(o.temporary?' · '+(activeRecord.detail?.note||'Preparing geometry…'):''):'';
+ $('modelBadge').title='LOD 400/500 use reference-inspired materials. Added markings and hardware are illustrative, not surveyed attributes.';
 $('removedReadout').textContent='Points Removed: '+(o.sourceCount-activeRecord.count).toLocaleString('en-US');$('countReadout').textContent='Points Remaining: '+activeRecord.count.toLocaleString('en-US');$('volumeControls').hidden=state.measure!=='volume';
   $('pickHint').textContent=state.measure!=='off'?(activeRecord.count?'Rotation paused · click '+(state.measure==='volume'?'at least three polygon corners':state.measure==='polyline'?'successive points along a polyline':state.mode==='points'?'two points':'the model surface'):'No points to measure.'):'';
- document.querySelectorAll('[data-method]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.method===state.method));document.querySelectorAll('[data-object]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.object)===state.object));}
-let smartEnabled=false,smartHighlights=true,smartFeatures=[],smartScreen=[],smartGeneration=0,smartPending=null,smartExportPending=null,smartSelected=null;
-let builtinWorker=null,builtinWorkerURL=null,builtinWorkerObject=-1,builtinTexturedParts=null,builtinMeshSerial=0,builtinMeshKey='';
-function resetSmartView(){
- smartGeneration++;smartPending=null;smartExportPending=null;smartFeatures=[];smartScreen=[];smartSelected=null;
- if($('featureDialog').open)$('featureDialog').close();$('seeFeature').disabled=false;
- $('detectionOverlay').replaceChildren();$('smartStatus').textContent=smartEnabled?'Preparing detection…':'Identify candidates using classifications, geometry, and color.';
+ document.querySelectorAll('[data-method]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.method===state.method));document.querySelectorAll('[data-object]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.object)===state.object));syncExtentControls();}
+let extentDrawing=false,extentPolygon=[],extentView=null,extentPending=null,extentSelection=null,extentExportPending=null,extentSerial=0;
+let builtinWorker=null,builtinWorkerURL=null,builtinWorkerObject=-1;
+const extentInstructions='Click polygon corners, then click the first corner or Finish Selection. Points through the full depth of this view are included.';
+function syncExtentControls(){
+ const locked=!!extentView,busy=document.body.dataset.temporaryBusy==='true';
+ $('selectExtent').disabled=busy||!objects[state.object]?.sourceCount;
+ $('selectExtent').setAttribute('aria-pressed',String(locked));
+ $('extentActions').hidden=!locked;
+ $('finishExtent').hidden=!extentDrawing;$('finishExtent').disabled=extentPolygon.length<3;
+ $('undoExtent').hidden=!extentDrawing;$('undoExtent').disabled=!extentPolygon.length;
+ $('cancelExtent').textContent=extentDrawing?'Cancel Selection':'Clear Selection';
+ for(const id of ['elevation','azimuth','reset','replica','decimation','measure','play'])$(id).disabled=locked||(id==='play'&&state.measure!=='off');
+ document.querySelectorAll('[data-speed]').forEach(b=>b.disabled=locked||state.measure!=='off');
+ document.querySelectorAll('[data-method]').forEach(b=>b.disabled=locked);
+ canvas.classList.toggle('selecting-extent',locked);
+}
+function resetExtentView(message=''){
+ extentSerial++;extentDrawing=false;extentPolygon=[];extentView=null;extentPending=null;extentSelection=null;extentExportPending=null;
+ if($('featureDialog').open)$('featureDialog').close();$('takeCloserLook').disabled=false;
+ $('extentOverlay').replaceChildren();$('extentStatus').textContent=message||'Draw a polygon to inspect selected points.';
+ syncExtentControls();
 }
 function releaseBuiltinWorker(){
- document.body.dataset.meshBusy='false';$('pointLoading').hidden=false;
- builtinMeshSerial++;builtinWorker?.terminate();if(builtinWorkerURL)URL.revokeObjectURL(builtinWorkerURL);
- builtinWorker=null;builtinWorkerURL=null;builtinWorkerObject=-1;builtinTexturedParts=null;builtinMeshKey='';
+ builtinWorker?.terminate();if(builtinWorkerURL)URL.revokeObjectURL(builtinWorkerURL);
+ builtinWorker=null;builtinWorkerURL=null;builtinWorkerObject=-1;
 }
 function createPointWorker(){
  const code=atob($('lazDecoderJS').textContent)+'\nconst LAZ_WASM='+JSON.stringify($('lazDecoderWASM').textContent.trim())+';\n'+$('temporaryWorkerCode').textContent;
@@ -1442,99 +1360,114 @@ function getSourceWorker(){
  if(builtinWorker&&builtinWorkerObject===state.object)return builtinWorker;
  releaseBuiltinWorker();const created=createPointWorker(),index=state.object,worker=created.worker;
  builtinWorker=worker;builtinWorkerURL=created.url;builtinWorkerObject=index;
- worker.onmessage=e=>{
-  if(worker!==builtinWorker||index!==state.object)return;const m=e.data;
-  if(handleSmartMessage(m,worker))return;
-  if(m.type==='mesh'&&m.id===builtinMeshSerial){
-   document.body.dataset.meshBusy='false';if(state.mode!=='mesh')return;
-   builtinTexturedParts=[m.mesh];activeRecord={...activeRecord,detail:{cellSize:m.mesh.cellSize}};buildGeometry();syncUI();render();
-   document.body.dataset.meshBusy='false';
-  }else if(m.type==='error'&&m.operation==='mesh'){
-   document.body.dataset.meshBusy='false';builtinMeshKey='';state.mode='points';upload();$('representationNote').textContent=m.message;
-  }
- };
- worker.onerror=e=>{$('pointLoading').hidden=true;document.body.dataset.meshBusy='false';$('smartStatus').textContent=e.message||'The analysis worker failed.';};
- const coordinates=o.coordinates.slice(),attributes=o.attributes.slice();
- worker.postMessage({type:'seed',coordinates,attributes,cloud:{sourceName:o.title,hasColor:o.hasColor,hasIntensity:o.hasIntensity,basis:o.basis||[[1,0,0],[0,1,0],[0,0,1]],origin:o.origin||[0,0,0]}},[coordinates.buffer,attributes.buffer]);
+ worker.onmessage=e=>{if(worker===builtinWorker&&index===state.object)handleExtentMessage(e.data,worker);};
+ worker.onerror=e=>{if(worker===builtinWorker){resetExtentView(e.message||'The selected points could not be processed.');releaseBuiltinWorker();}};
+ const coordinates=o.coordinates.slice(),attributes=o.attributes.slice(),intensity=o.sourceIntensity?.slice();
+ worker.postMessage({type:'seed',coordinates,attributes,intensity,cloud:{sourceName:o.title,hasColor:o.hasColor,hasIntensity:o.hasIntensity,rgbScale:o.rgbScale,intensityRange:o.intensityRange,basis:o.basis||[[1,0,0],[0,1,0],[0,0,1]],origin:o.origin||[0,0,0]}},[coordinates.buffer,attributes.buffer,...(intensity?[intensity.buffer]:[])]);
  return worker;
 }
-function requestBuiltinMesh(clear=true){
- const o=objects[state.object];activeRecord=o.modes[state.method][state.level];points=dataFor(o,activeRecord);pointAttributes=appearanceFor(o,activeRecord);uploadPointBuffer();if(clear)measurements=[];
- const worker=getSourceWorker(),key=[state.object,state.method,state.level].join(':');
- if(builtinMeshKey===key&&builtinTexturedParts){buildGeometry();syncUI();render();return;}
- builtinMeshKey=key;builtinTexturedParts=null;buildGeometry();syncUI();render();
- document.body.dataset.meshBusy='true';$('pointLoading').hidden=false;
- worker.postMessage({type:'mesh',id:++builtinMeshSerial,method:state.method,level:state.level});
+function startExtent(){
+ if(document.body.dataset.temporaryBusy==='true'||!objects[state.object]?.sourceCount)return;
+ resetExtentView();state.playing=false;state.measure='off';measurements=[];
+ // Returning from a replica can require an asynchronous display update.
+ if(state.mode!=='points'){state.mode='points';upload();}
+ camera();extentView={basis:basis.map(v=>v.slice()),half:half.slice(),pan:state.pan.slice(),distance:objects[state.object].distance,width:canvas.clientWidth,height:canvas.clientHeight};
+ extentDrawing=true;$('extentStatus').textContent=extentInstructions;syncUI();render();canvas.focus();
 }
-function runSmartDetection(){
- smartGeneration++;smartFeatures=[];smartScreen=[];if($('featureDialog').open)$('featureDialog').close();drawSmartOverlay();
- if(!smartEnabled){$('smartStatus').textContent='Smart Detection is off.';return;}
- const worker=getSourceWorker();if(!worker){$('smartStatus').textContent='Load a point cloud first.';return;}
- smartPending={id:smartGeneration,worker,object:state.object,featureClass:$('smartClass').value};
- $('smartStatus').textContent='Finding candidates…';worker.postMessage({type:'detect',id:smartPending.id,featureClass:smartPending.featureClass});
+function drawExtentOverlay(){
+ const svg=$('extentOverlay'),w=canvas.clientWidth,h=canvas.clientHeight;svg.setAttribute('viewBox','0 0 '+w+' '+h);
+ if(!extentView||!extentPolygon.length){svg.replaceChildren();return;}
+ const screen=extentPolygon.map(p=>[(p[0]+1)*w/2,(1-p[1])*h/2]);
+ const node=document.createElementNS('http://www.w3.org/2000/svg',screen.length>=3?'polygon':'polyline');
+ node.setAttribute('points',screen.map(p=>p.join(',')).join(' '));node.setAttribute('aria-label','Selected extent');svg.replaceChildren(node);
+ if(extentDrawing)for(let i=0;i<screen.length;i++){
+  const p=screen[i],circle=document.createElementNS('http://www.w3.org/2000/svg','circle');circle.setAttribute('cx',p[0]);circle.setAttribute('cy',p[1]);circle.setAttribute('r',i===0?6:4);svg.append(circle);
+ }
 }
-function handleSmartMessage(m,worker){
- if(m.type==='detection'){
-  if(!smartEnabled||!smartPending||smartPending.worker!==worker||m.id!==smartPending.id||smartPending.object!==state.object||m.featureClass!==$('smartClass').value)return true;
-  smartFeatures=m.features;smartPending=null;$('smartStatus').textContent=smartFeatures.length.toLocaleString()+' candidate'+(smartFeatures.length===1?'':'s')+(smartFeatures.length?' · Click a highlight to inspect.':'.')+(m.resolution>.5?' Detection resolution: '+m.resolution.toFixed(2)+' m.':'');render();return true;
+function addExtentCorner(x,y){
+ if(!extentDrawing)return;
+ const w=canvas.clientWidth,h=canvas.clientHeight;
+ if(x<0||x>w||y<0||y>h)return;
+ const p=[x/w*2-1,1-y/h*2],first=extentPolygon[0],last=extentPolygon.at(-1);
+ if(first&&extentPolygon.length>=3&&Math.hypot((p[0]-first[0])*w/2,(p[1]-first[1])*h/2)<=10){finishExtent();return;}
+ if(last&&Math.hypot((p[0]-last[0])*w/2,(p[1]-last[1])*h/2)<3)return;
+ extentPolygon.push(p);syncExtentControls();drawExtentOverlay();
+}
+function handleExtentPointer(e){
+ if(e.button!==0)return;e.preventDefault();
+ const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+ if(extentDrawing){addExtentCorner(x,y);return;}
+ const px=x/canvas.clientWidth*2-1,py=1-y/canvas.clientHeight*2;let inside=false;
+ for(let i=0,j=extentPolygon.length-1;i<extentPolygon.length;j=i++){
+  const a=extentPolygon[i],b=extentPolygon[j];if((a[1]>py)!==(b[1]>py)&&px<(b[0]-a[0])*(py-a[1])/(b[1]-a[1])+a[0])inside=!inside;
  }
- if(m.type==='featureExport'){
-  if(!smartExportPending||smartExportPending.worker!==worker||m.id!==smartExportPending.id||smartExportPending.object!==state.object)return true;
-  const parent=state.object;smartExportPending=null;$('featureDialog').close();$('seeFeature').disabled=false;
-  const file=new File([m.buffer],m.name,{type:'application/octet-stream'}),index=objects.length;
-  objects.push({file,title:m.feature.type+' '+m.feature.id,temporary:true,internal:true,parent,sourceCount:m.count});
-  addImportedNavigation(index);openTemporaryFile(file,index);return true;
+ if(inside&&extentSelection)openExtentDialog();
+}
+function finishExtent(){
+ if(!extentDrawing||extentPolygon.length<3)return;
+ let area=0;for(let i=0,j=extentPolygon.length-1;i<extentPolygon.length;j=i++)area+=extentPolygon[j][0]*extentPolygon[i][1]-extentPolygon[i][0]*extentPolygon[j][1];
+ if(Math.abs(area)*canvas.clientWidth*canvas.clientHeight/8<9){$('extentStatus').textContent='Draw a polygon with a nonzero area.';return;}
+ const worker=getSourceWorker();if(!worker)return;
+ extentDrawing=false;extentSelection=null;extentPending={id:++extentSerial,worker,object:state.object};
+ $('featureDialogTitle').textContent='Selected Extent';$('featureDialogInfo').textContent='Counting selected source points…';$('takeCloserLook').disabled=true;$('featureDialog').showModal();
+ $('extentStatus').textContent='Counting selected source points…';syncExtentControls();drawExtentOverlay();
+ worker.postMessage({type:'selectExtent',id:extentPending.id,polygon:extentPolygon,view:extentView});
+}
+function openExtentDialog(){
+ if(!extentSelection)return;
+ $('featureDialogTitle').textContent='Selected Extent';
+ $('featureDialogInfo').textContent=extentSelection.count?extentSelection.count.toLocaleString()+' source points selected. Open them in the viewer for measurements and shape fitting.':'No source points fall inside this polygon. Close this window and select another extent.';
+ $('takeCloserLook').disabled=!extentSelection.count||!!extentExportPending;
+ if(!$('featureDialog').open)$('featureDialog').showModal();
+}
+function handleExtentMessage(m,worker){
+ const matches=p=>p&&p.worker===worker&&p.id===m.id&&p.object===state.object;
+ if(m.type==='extentSelected'){
+  if(!matches(extentPending))return true;
+  extentSelection={...extentPending,count:m.count};extentPending=null;
+  $('extentStatus').textContent=m.count?m.count.toLocaleString()+' source points selected. Click the highlighted extent to inspect.':'No source points selected. Draw another extent.';
+  if($('featureDialog').open)openExtentDialog();return true;
  }
- if(m.type==='error'&&['detect','extract'].includes(m.operation)){
-  if(m.operation==='detect'&&smartPending?.id===m.id){smartPending=null;$('smartStatus').textContent=m.message;}
-  if(m.operation==='extract'&&smartExportPending?.id===m.id){smartExportPending=null;$('seeFeature').disabled=false;$('featureDialogInfo').textContent=m.message;}
+ if(m.type==='extentExport'){
+  if(!matches(extentExportPending))return true;
+  extentExportPending=null;
+  const file=new File([m.buffer],'selected_extent.ply',{type:'application/octet-stream'});
+  openTemporaryFile(file,null,{internal:true,title:'Selected Extent',appearance:m.appearance,sourceCount:m.count});return true;
+ }
+ if(m.type==='error'&&['selectExtent','exportExtent'].includes(m.operation)){
+  if(matches(extentPending)||matches(extentExportPending)){
+   extentPending=null;extentExportPending=null;$('featureDialogInfo').textContent=m.message;$('extentStatus').textContent=m.message;$('takeCloserLook').disabled=!extentSelection?.count;
+  }
   return true;
  }
+ if(m.type==='progress'&&(extentPending?.worker===worker||extentExportPending?.worker===worker)){$('extentStatus').textContent=m.text;return true;}
  return false;
 }
-function smartConvexHull(points){
- if(points.length<3)return points;const p=points.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]),cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
- const l=[],u=[];for(const q of p){while(l.length>1&&cross(l.at(-2),l.at(-1),q)<=0)l.pop();l.push(q);}for(const q of p.reverse()){while(u.length>1&&cross(u.at(-2),u.at(-1),q)<=0)u.pop();u.push(q);}l.pop();u.pop();return l.concat(u);
-}
-function drawSmartOverlay(){
- const svg=$('detectionOverlay');svg.setAttribute('viewBox','0 0 '+canvas.clientWidth+' '+canvas.clientHeight);smartScreen=[];
- if(!smartEnabled||!smartHighlights||!basis.length){svg.replaceChildren();return;}
- const fragment=document.createDocumentFragment();
- for(const feature of smartFeatures){
-  const corners=[];for(const x of [feature.lo[0],feature.hi[0]])for(const y of [feature.lo[1],feature.hi[1]])for(const z of [feature.lo[2],feature.hi[2]])corners.push(project([x,y,z]));
-  const hull=smartConvexHull(corners);if(hull.some(p=>!p.every(Number.isFinite)))continue;
-  const polygon=document.createElementNS('http://www.w3.org/2000/svg','polygon');polygon.setAttribute('points',hull.map(p=>p[0]+','+p[1]).join(' '));polygon.dataset.feature=feature.id;polygon.setAttribute('aria-label',feature.type+' candidate '+feature.id);fragment.append(polygon);
-  smartScreen.push({feature,hull,depth:project(feature.center)[2]});
- }
- svg.replaceChildren(fragment);
-}
-function pickSmartFeature(x,y){
- let found=null,depth=-Infinity;for(const item of smartScreen){let inside=false;const p=item.hull;for(let i=0,j=p.length-1;i<p.length;j=i++)if((p[i][1]>y)!==(p[j][1]>y)&&x<(p[j][0]-p[i][0])*(y-p[i][1])/(p[j][1]-p[i][1])+p[i][0])inside=!inside;if(inside&&item.depth>depth){found=item.feature;depth=item.depth;}}
- return found;
-}
-function openFeatureDialog(feature){
- smartSelected={feature,object:state.object,featureClass:$('smartClass').value};state.playing=false;syncUI();
- $('featureDialogTitle').textContent=feature.type;
- $('featureDialogInfo').textContent='Candidate '+feature.id+' · '+feature.count.toLocaleString()+' source points. Inspect the candidate to confirm its type.';
- $('seeFeature').disabled=false;if(!$('featureDialog').open)$('featureDialog').showModal();
-}
-$('smartToggle').addEventListener('click',()=>{smartEnabled=!smartEnabled;$('smartToggle').setAttribute('aria-pressed',String(smartEnabled));$('smartToggle').textContent='Smart Detection: '+(smartEnabled?'On':'Off');runSmartDetection();});
-$('highlightToggle').addEventListener('click',()=>{smartHighlights=!smartHighlights;$('highlightToggle').setAttribute('aria-pressed',String(smartHighlights));$('highlightToggle').textContent='Highlight: '+(smartHighlights?'On':'Off');if(!smartHighlights&&$('featureDialog').open)$('featureDialog').close();drawSmartOverlay();});
-$('smartClass').addEventListener('change',runSmartDetection);
-$('closeFeature').addEventListener('click',()=>{$('featureDialog').close();smartExportPending=null;});
-$('featureDialog').addEventListener('cancel',()=>smartExportPending=null);
-$('seeFeature').addEventListener('click',()=>{
- if(!smartSelected||smartSelected.object!==state.object)return;
- const worker=getSourceWorker();if(!worker)return;smartExportPending={id:++smartGeneration,worker,object:state.object};$('seeFeature').disabled=true;$('featureDialogInfo').textContent='Preparing the selected source points…';
- worker.postMessage({type:'extract',id:smartExportPending.id,featureClass:smartSelected.featureClass,featureId:smartSelected.feature.id});
+$('selectExtent').addEventListener('click',safe(startExtent));
+$('finishExtent').addEventListener('click',safe(finishExtent));
+$('undoExtent').addEventListener('click',()=>{extentPolygon.pop();syncExtentControls();drawExtentOverlay();});
+$('cancelExtent').addEventListener('click',()=>{resetExtentView();syncUI();render();});
+$('closeFeature').addEventListener('click',()=>{$('featureDialog').close();extentExportPending=null;});
+$('featureDialog').addEventListener('cancel',()=>{extentExportPending=null;});
+$('takeCloserLook').addEventListener('click',safe(()=>{
+ if(!extentSelection?.count||extentSelection.object!==state.object||extentExportPending)return;
+ const worker=extentSelection.worker;extentExportPending={id:++extentSerial,worker,object:state.object};
+ $('takeCloserLook').disabled=true;$('featureDialogInfo').textContent='Preparing the selected source points…';
+ worker.postMessage({type:'exportExtent',id:extentExportPending.id,selectionId:extentSelection.id});
+}));
+canvas.addEventListener('dblclick',e=>{if(extentDrawing){e.preventDefault();finishExtent();}});
+document.addEventListener('keydown',e=>{
+ if(!extentView||$('featureDialog').open||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+ if(e.key==='Escape'){e.preventDefault();resetExtentView();syncUI();render();}
+ if(e.key==='Enter'&&extentDrawing&&e.target===canvas){e.preventDefault();finishExtent();}
 });
 window.addEventListener('pagehide',releaseBuiltinWorker);
 
 function selectObject(index){
  index=Number(index);const selected=objects[index];if(!selected||selected.removed)return;
- resetSmartView();releaseBuiltinWorker();
+ resetExtentView();releaseBuiltinWorker();
  if(selected.file||selected.cloudBytes){if(temporaryWorker&&workerObjectIndex===index){state.object=index;state.pan=[0,0,0];state.zoom=1;upload();return;}openTemporaryFile(selected.file||new File([decode(selected.cloudBytes,Uint8Array)],selected.filename),index);return;}
- releaseTemporary();state.object=index;state.elevation=selected.elevation;state.azimuth=((selected.azimuth%360)+360)%360;state.zoom=1;state.pan=[0,0,0];upload();if(smartEnabled)runSmartDetection();
+ releaseTemporary();state.object=index;state.elevation=selected.elevation;state.azimuth=((selected.azimuth%360)+360)%360;state.zoom=1;state.pan=[0,0,0];upload();
 }
 function fail(error){$('error').style.display='block';$('error').textContent=error.message||String(error);document.body.dataset.ready='error';console.error(error);}
 function safe(fn){return (...args)=>{try{return fn(...args);}catch(error){fail(error);}};}
@@ -1545,9 +1478,8 @@ for(const b of document.querySelectorAll('[data-speed]'))b.addEventListener('cli
 $('elevation').addEventListener('input',e=>{state.elevation=Number(e.target.value);syncUI();render();});
 $('azimuth').addEventListener('input',e=>{state.azimuth=Number(e.target.value);syncUI();render();});
 $('play').addEventListener('click',()=>{if(state.measure==='off')state.playing=!state.playing;syncUI();});
-$('reset').addEventListener('click',()=>{const o=objects[state.object];state.elevation=o.elevation;state.azimuth=(o.azimuth+360)%360;state.zoom=1;state.pan=[0,0,0];syncUI();render();});
+$('reset').addEventListener('click',()=>{const o=objects[state.object];state.elevation=o.elevation;state.azimuth=(o.azimuth+360)%360;state.zoom=1;state.pan=[0,0,0];state.measure='off';measurements=[];state.playing=true;syncUI();render();});
 $('replica').addEventListener('click',safe(()=>{state.mode=state.mode==='replica'?'points':'replica';upload();}));
-$('texturedMesh').addEventListener('click',safe(()=>{state.mode=state.mode==='mesh'?'points':'mesh';upload();}));
 for(const [id,key] of [['colorToggle','color'],['intensityToggle','intensity']])$(id).addEventListener('click',()=>{state[key]=!state[key];syncUI();render();});
 $('showFit').addEventListener('click',safe(()=>{state.showFit=!state.showFit;upload(false);}));
 $('lod').addEventListener('change',safe(e=>{state.lod=Number(e.target.value);upload();}));
@@ -1556,7 +1488,7 @@ $('clear').addEventListener('click',()=>{measurements=[];syncUI();render();});$(
 let drag=null;
 canvas.title='Drag to rotate · Shift-drag or right-drag to pan · Scroll to zoom';
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,moved:false,pan:e.shiftKey||e.button!==0};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointerdown',e=>{if(extentView){handleExtentPointer(e);return;}drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,moved:false,pan:e.shiftKey||e.button!==0};canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointermove',e=>{
  if(!drag||drag.id!==e.pointerId)return;
  const dx=e.clientX-drag.lastX,dy=e.clientY-drag.lastY;if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>4)drag.moved=true;
@@ -1571,13 +1503,12 @@ canvas.addEventListener('pointerup',e=>{
  if(drag&&drag.id===e.pointerId&&!drag.moved){
   const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
   if(state.measure!=='off'){const point=pick(x,y);if(point)addMeasurement(point);else $('pickHint').textContent='No surface at that position. Click a visible point or model.';}
-  else if(smartEnabled&&smartHighlights){const feature=pickSmartFeature(x,y);if(feature)openFeatureDialog(feature);}
  }
  drag=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointercancel',()=>drag=null);canvas.addEventListener('lostpointercapture',()=>drag=null);
 canvas.addEventListener('wheel',e=>{
- e.preventDefault();const modeScale=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
+ e.preventDefault();if(extentView)return;const modeScale=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
  // No navigation range clamp: reject only floating-point overflow/underflow.
  const zoom=state.zoom*Math.exp(-e.deltaY*modeScale*.001);
  if(Number.isFinite(zoom)&&zoom>0&&Number.isFinite(objects[state.object].viewRadius/zoom)&&objects[state.object].viewRadius/zoom>0)state.zoom=zoom;
@@ -1585,7 +1516,7 @@ canvas.addEventListener('wheel',e=>{
 },{passive:false});
 
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();state.playing=false;fail(new Error('The graphics context was lost. Reload this page to restore the viewer.'));});
-function animate(time){const dt=lastTime?Math.min((time-lastTime)/1000,.06):0;lastTime=time;if(state.playing&&state.measure==='off'){state.azimuth=(state.azimuth+dt*93.75*state.speed)%360;$('azimuth').value=Math.round(state.azimuth);$('azimuthValue').textContent=state.azimuth.toFixed(2)+'\u00b0';render();}requestAnimationFrame(animate);}
+function animate(time){const dt=lastTime?Math.min((time-lastTime)/1000,.06):0;lastTime=time;if(state.playing&&state.measure==='off'&&!extentView){state.azimuth=(state.azimuth+dt*93.75*state.speed)%360;$('azimuth').value=Math.round(state.azimuth);$('azimuthValue').textContent=state.azimuth.toFixed(2)+'\u00b0';render();}requestAnimationFrame(animate);}
 
 window.decimationViewer={state,objects,render,upload,selectObject,project,pick,addMeasurement,measurementResult,makeMesh,rayTriangle,
  setState(change){Object.assign(state,change);if(state.measure!=='off')state.playing=false;upload();},
@@ -1607,19 +1538,18 @@ function addImportedNavigation(index){
  if(document.querySelector('[data-object="'+index+'"]'))return;
  const button=document.createElement('button');button.textContent=objects[index].title;button.dataset.object=index;button.dataset.temporaryObject='true';button.addEventListener('click',safe(()=>selectObject(index)));$('objects').insertBefore(button,$('uploadTemporary'));
 }
+function removeTemporaryOptions(){
+ document.querySelectorAll('[data-temporary-object]').forEach(b=>b.remove());objects.splice(builtinCount);
+}
 function clearTemporary(){
- const index=document.body.dataset.temporaryBusy==='true'&&workerObjectIndex>=0?workerObjectIndex:state.object;resetSmartView();releaseTemporary();$('temporaryTools').hidden=true;
- if(index>=builtinCount){objects[index]={removed:true};document.querySelector('[data-object="'+index+'"]')?.remove();}
+ resetExtentView();releaseTemporary();$('temporaryTools').hidden=true;
+ removeTemporaryOptions();
  state.object=0;state.mode='points';selectObject(0);
 }
 function temporaryError(message){
- if(workerObjectIndex>=0&&(!objects[workerObjectIndex]?.sourceCount||state.object!==workerObjectIndex)){
-  const failed=workerObjectIndex;resetSmartView();releaseTemporary();
-  if(failed>=builtinCount&&!objects[failed].sourceCount){objects[failed]={removed:true};document.querySelector('[data-object="'+failed+'"]')?.remove();}
-  state.mode='points';selectObject(0);
- }
- document.body.dataset.temporaryBusy='false';temporaryBusy=false;temporaryQueued=null;$('cancelTemporary').hidden=true;
- temporaryStatus(message);$('clearTemporary').hidden=state.object<builtinCount;
+ const failed=workerObjectIndex;resetExtentView();releaseTemporary();
+ if(failed>=builtinCount)removeTemporaryOptions();
+ state.mode='points';selectObject(0);temporaryStatus(message);
 }
 function temporaryStatePump(){
  temporaryTimer=null;if(temporaryBusy||!temporaryQueued||!temporaryWorker)return;
@@ -1631,31 +1561,28 @@ function requestTemporaryState(clear=true){
  temporaryQueued={type:'state',id:++temporarySerial,method:state.method,level:state.level,lod:state.lod,mode:state.mode,showFit:state.showFit};
  clearTimeout(temporaryTimer);temporaryTimer=setTimeout(temporaryStatePump,60);
 }
-async function openTemporaryFile(file,targetIndex=null){
+async function openTemporaryFile(file,targetIndex=null,metadata={}){
  if(!file)return;
  if(!gl||!pointProgram){temporaryStatus('WebGL is required to display a point cloud.');return;}
- const internal=targetIndex!==null&&!!objects[targetIndex]?.internal;
+ const internal=!!metadata.internal||(targetIndex!==null&&!!objects[targetIndex]?.internal);
  if(file.size>CLOUD_FILE_LIMIT&&!internal){temporaryStatus(CLOUD_FILE_LIMIT_MESSAGE);$('temporaryFile').value='';return;}
- resetSmartView();releaseBuiltinWorker();releaseTemporary();
- if(targetIndex===null){targetIndex=objects.length;objects.push({file,title:file.name,temporary:true,sourceCount:0});addImportedNavigation(targetIndex);}
+ resetExtentView();releaseBuiltinWorker();releaseTemporary();
+ if(targetIndex===null){state.object=0;state.mode='points';removeTemporaryOptions();selectObject(0);targetIndex=builtinCount;objects.push({file,title:file.name,temporary:true,sourceCount:0,...metadata});addImportedNavigation(targetIndex);}
  workerObjectIndex=targetIndex;temporaryName=file.name;const version=temporaryVersion;
- document.body.dataset.temporaryBusy='true';temporaryStatus('Loading…');$('cancelTemporary').hidden=false;
+ document.body.dataset.temporaryBusy='true';temporaryStatus('Loading…');$('cancelTemporary').hidden=false;syncExtentControls();
  try{
   const created=createPointWorker(),worker=created.worker;temporaryWorker=worker;temporaryWorkerURL=created.url;
   worker.onerror=e=>{if(worker===temporaryWorker)temporaryError(e.message||'The file could not be processed.');};
   worker.onmessage=safe(event=>{
    if(worker!==temporaryWorker||version!==temporaryVersion)return;const m=event.data;
-   if(handleSmartMessage(m,worker))return;
-   if(m.type==='progress'){if(document.body.dataset.temporaryBusy==='true')temporaryStatus(m.text);else if(smartPending)$('smartStatus').textContent=m.text;return;}
-   if(m.type==='error'){
-    if(m.operation==='state'&&state.mode==='mesh'){objects[state.object].meshError=m.message;state.mode='points';temporaryBusy=false;requestTemporaryState();}
-    else temporaryError(m.message);return;
-   }
+   if(handleExtentMessage(m,worker))return;
+   if(m.type==='progress'){if(document.body.dataset.temporaryBusy==='true')temporaryStatus(m.text);return;}
+   if(m.type==='error'){temporaryError(m.message);return;}
    if(m.type==='loaded'){
     const previous=objects[targetIndex],title=targetIndex<builtinCount?previous.title:previous.title||file.name;
     objects[targetIndex]={...previous,...m.cloud,file,temporary:true,title,slug:targetIndex<builtinCount?previous.slug:'IMPORTED_'+targetIndex,elevation:10,azimuth:0,modes:{}};
     const level=m.cloud.sourceCount>1000000?Math.min(99,Math.ceil(100*(1-1000000/m.cloud.sourceCount))):0;
-    Object.assign(state,{object:targetIndex,method:'random',level,mode:'points',lod:100,measure:'off',playing:m.cloud.sourceCount<1000000,elevation:10,azimuth:0,zoom:1,pan:[0,0,0],showFit:false});
+    Object.assign(state,{object:targetIndex,method:'random',level,mode:'points',lod:100,measure:'off',playing:!internal&&m.cloud.sourceCount<1000000,elevation:10,azimuth:0,zoom:1,pan:[0,0,0],showFit:false});
     points=new Float32Array();pointAttributes=new Float32Array();activeRecord={level,count:0,supported:false,reason:'Loading view',parts:[],parameters:{}};measurements=[];buildGeometry();syncUI();render();requestTemporaryState();return;
    }
    if(m.type==='state'){
@@ -1664,14 +1591,13 @@ async function openTemporaryFile(file,targetIndex=null){
      temporaryCoordinates=m.coordinates;temporaryReplica=m.replica;activeRecord=m.record;points=new Float32Array(temporaryCoordinates);pointAttributes=m.attributes;
      uploadPointBuffer();buildGeometry();syncUI();render();document.body.dataset.temporaryBusy='false';
      const o=objects[state.object],decimated=activeRecord.count<o.sourceCount;
-     temporaryStatus((o.meshError?o.meshError+' ':'')+(decimated?'Displaying '+activeRecord.count.toLocaleString()+' of '+o.sourceCount.toLocaleString()+' points. Full source retained. ':'')+(o.unitNote||'Meters'));delete o.meshError;
+     temporaryStatus((decimated?'Displaying '+activeRecord.count.toLocaleString()+' of '+o.sourceCount.toLocaleString()+' points. Full source retained. ':'')+(o.unitNote||'Meters'));syncExtentControls();
      $('cancelTemporary').hidden=true;$('clearTemporary').hidden=state.object<builtinCount;
-     if(smartEnabled&&!smartFeatures.length&&!smartPending)runSmartDetection();
     }
     if(temporaryQueued)temporaryStatePump();
    }
   });
-  worker.postMessage({type:'file',file,name:file.name,units:'auto',vertical:'auto',internal});$('temporaryFile').value='';
+  worker.postMessage({type:'file',file,name:file.name,units:'auto',vertical:'auto',internal,appearance:objects[targetIndex].appearance});$('temporaryFile').value='';
  }catch(error){if(version===temporaryVersion)temporaryError(error.message||String(error));}
 }
 
@@ -1687,7 +1613,7 @@ $('cancelTemporary').addEventListener('click',clearTemporary);$('clearTemporary'
 window.addEventListener('pagehide',clearTemporary);
 window.decimationViewer.openTemporaryFile=openTemporaryFile;
 window.decimationViewer.clearTemporary=clearTemporary;
-try{initGL();selectObject(0);new ResizeObserver(()=>render()).observe($('scene'));requestAnimationFrame(animate);document.body.dataset.ready='true';}catch(error){fail(error);}
+try{initGL();selectObject(0);new ResizeObserver(()=>{if(extentView&&(extentView.width!==canvas.clientWidth||extentView.height!==canvas.clientHeight))resetExtentView('The view was resized. Select the extent again.');render();}).observe($('scene'));requestAnimationFrame(animate);document.body.dataset.ready='true';}catch(error){fail(error);}
 
 
 
@@ -1812,6 +1738,12 @@ function dsmColor(t){
  const colors=dsmPalettes[name],p=Math.max(0,Math.min(1,t))*(colors.length-1),i=Math.min(colors.length-2,Math.floor(p)),f=p-i;
  return colors[i].map((v,k)=>Math.round(v+(colors[i+1][k]-v)*f));
 }
+function updateDSMPalettePreview(){
+ const gradient='linear-gradient(90deg,'+Array.from({length:41},(_,i)=>'rgb('+dsmColor(i/40).join(',')+') '+i*2.5+'%').join(',')+')';
+ $('dsmPalettePreview').style.background=gradient;document.querySelector('.dsm-scale div').style.background=gradient;
+ const label=$('dsmPalette').selectedOptions[0].textContent+($('dsmColorblind').checked?' (Colorblind Safe)':'')+' color preview';
+ $('dsmPalettePreview').setAttribute('aria-label',label);$('dsmPalettePreview').title=label;
+}
 function clearDSMReadout(){$('dsmMapReadout').textContent='Cell Value: N/A';}
 function makeDSMImage(){
  if(!dsmResult)return;
@@ -1835,7 +1767,7 @@ function makeDSMImage(){
   data.data.set([...color,255],j*4);
  }
  ctx.putImageData(data,0,0);dsmImage=image;dsmPixels={width,height,sums,counts,factor,field};
- document.querySelector('.dsm-scale div').style.background='linear-gradient(90deg,'+Array.from({length:41},(_,i)=>'rgb('+dsmColor(i/40).join(',')+') '+i*2.5+'%').join(',')+')';
+ updateDSMPalettePreview();
  $('dsmScaleMin').textContent=hasValues?dsmNumber(min):'N/A';$('dsmScaleMax').textContent=hasValues?dsmNumber(max):'N/A';
  $('dsmMapTitle').textContent=$('dsmLayer').selectedOptions[0].textContent;
  clearDSMReadout();
@@ -1909,7 +1841,7 @@ $('dsmLayer').addEventListener('change',()=>{
  if(next!==$('dsmFilter').checked){$('dsmFilter').checked=next;updateDSMView();}
  else{makeDSMImage();drawDSMMap();}
 });
-for(const id of ['dsmPalette','dsmColorblind'])$(id).addEventListener('change',()=>{makeDSMImage();drawDSMMap();});
+for(const id of ['dsmPalette','dsmColorblind'])$(id).addEventListener('change',()=>{updateDSMPalettePreview();makeDSMImage();drawDSMMap();});
 $('dsmResetMap').addEventListener('click',()=>{dsmCamera={zoom:1,x:0,y:0,angle:0};clearDSMReadout();drawDSMMap();});
 let dsmDrag=null;
 $('dsmMap').addEventListener('contextmenu',e=>e.preventDefault());
@@ -1934,6 +1866,6 @@ $('dsmHistogram').addEventListener('mouseleave',drawDSMHistogram);
 new ResizeObserver(()=>{drawDSMMap();drawDSMHistogram();}).observe($('dsmMap'));
 window.addEventListener('pagehide',()=>stopDSM());
 window.dsmViewer={start:startDSM,update:updateDSMView,cancel:stopDSM,createWorker:createDSMWorker,get result(){return dsmResult;},get busy(){return dsmBusy;}};
-drawDSMMap();drawDSMHistogram();
+updateDSMPalettePreview();drawDSMMap();drawDSMHistogram();
 
 </script></body></html>
