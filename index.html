@@ -67,7 +67,19 @@ main{max-width:1680px;padding:28px 28px 42px}
 #dsmMapReadout{min-height:32px}
 .dsm-scale{min-height:40px;flex:none}
 .dsm-tables caption{text-align:left;font-size:16px;font-weight:600;padding:10px 0}
-#dsmThresholdSummary{color:var(--muted);font-size:13px}
+#dsmThresholdSummary,#dsmComparisonNote{color:var(--muted);font-size:13px}
+sub{font-size:75%;line-height:0;vertical-align:sub}
+.scientific-select{position:relative;min-width:0}
+.scientific-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;font-size:12px;padding:8px;min-height:36px}
+.scientific-trigger>span:first-child{min-width:0;white-space:normal}
+.scientific-options{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:6;border:1px solid #6e8098;border-radius:7px;background:#182231;box-shadow:0 8px 20px #0007;padding:4px;font-size:12px}
+.scientific-options [role=option]{padding:9px 8px;border-radius:4px;cursor:pointer}
+.scientific-options [role=option]:hover,.scientific-options .active{background:#30425c}
+.scientific-options [aria-selected=true]{color:var(--yellow)}
+@media(max-width:540px){
+ .dsm-tables table{table-layout:fixed;font-size:12px}
+ .dsm-tables th,.dsm-tables td{padding:8px 5px;overflow-wrap:anywhere}
+}
 @media(min-width:1500px){.workspace{height:710px}.dsm-workspace{height:810px}}
 @media(max-width:1050px) and (min-width:901px){.workspace{grid-template-columns:minmax(0,1fr) 315px}.scene-head{flex-wrap:wrap}.scene-actions{margin-left:auto}}
 @media(max-width:900px){
@@ -153,10 +165,10 @@ main{max-width:1680px;padding:28px 28px 42px}
 <button id="dsmRun" class="full" style="margin-top:14px">Rasterize &amp; Difference</button></div>
 <div class="control-group">
 <label class="check"><input id="dsmFilter" type="checkbox">Apply Uncertainty Thresholds (95% CL)</label>
-<label class="small" for="dsmUncertainty">Uncertainty Method</label><select id="dsmUncertainty" class="full"><option value="m3c2">M3C2 LoD95% (Spatially Varying)</option><option value="checkpoints">Checkpoint Accuracy (Uniform)</option></select>
-<label class="small" for="dsmCPMetric">Uncertainty Metric</label><select id="dsmCPMetric" class="full"><option value="rmse">RMSE</option><option value="sigma">Sigma</option></select>
+<label class="small" for="dsmUncertainty">Uncertainty Method</label><select id="dsmUncertainty" class="full"><option value="m3c2">Spatially Varying M3C2 LoD95%</option><option value="checkpoints">Uniform Checkpoint Accuracy</option></select>
+<label class="small" for="dsmCPMetric">Vertical Checkpoint Metric</label><select id="dsmCPMetric" class="full"><option value="rmse">RMSEz</option><option value="sigma">Sigmaz</option></select>
 </div>
-<div class="control-group"><label class="control-label" for="dsmNoise">Vertical Precision Degradation <output id="dsmNoiseValue">0.00 cm</output></label><input id="dsmNoise" type="range" min="0" max="50" step="1" value="0"><div class="range-ends"><span>0.00 cm</span><span>50.00 cm</span></div></div>
+<div class="control-group"><label class="control-label" for="dsmNoise">Precision Degradation (Gaussian Noise) <output id="dsmNoiseValue">0.00 cm</output></label><input id="dsmNoise" type="range" min="0" max="50" step="1" value="0"><div class="range-ends"><span>0.00 cm</span><span>50.00 cm</span></div></div>
 <div class="control-group">
 <label class="small" for="dsmLayer">Feature to Visualize</label><select id="dsmLayer" class="full"><option value="survey1">Survey 1</option><option value="survey2">Survey 2</option><option value="dod" selected>DoD (Standard)</option><option value="propagated">DoD with Error Propagation</option></select>
 <label class="small" for="dsmPalette">Symbology</label><div class="symbology-options"><select id="dsmPalette" class="full"><option value="diverging">Blue-White-Red</option><option value="bwr">BWR</option><option value="cividis">Cividis</option><option value="coolwarm">Cool to Warm</option><option value="plasma">Plasma</option><option value="precipitation">Precipitation</option><option value="PRGn">PRGN</option><option value="seismic">Seismic</option><option value="viridis">Viridis</option></select><div id="dsmPalettePreview" role="img" aria-label="Symbology color preview"></div></div>
@@ -399,6 +411,7 @@ function lasHeader(buffer,fileSize=buffer.byteLength,readExtended=true){
   const v=new DataView(buffer),major=v.getUint8(24),minor=v.getUint8(25),headerSize=v.getUint16(94,true),dataOffset=v.getUint32(96,true),formatByte=v.getUint8(104),format=formatByte&63,pointLength=v.getUint16(105,true);
   if(major!==1||minor>4)throw Error('Use LAS/LAZ version 1.0–1.4 for this viewer.');
   const minimum=minor>=4?375:minor===3?235:227;
+  if(buffer.byteLength<minimum||headerSize>buffer.byteLength)throw Error('The LAS header is truncated.');
   if(headerSize<minimum||headerSize>dataOffset||dataOffset>fileSize||format>10||(formatByte&64)||pointLength<MIN_LENGTH[format])throw Error('The LAS header or point-record layout is invalid.');
   let count=v.getUint32(107,true);if(minor>=4){const extended=u64(v,247);if(extended)count=extended;}
   if(!count)throw Error('This point cloud contains no points.');
@@ -481,9 +494,9 @@ function averageAppearance(xyz,attributes,size,origin){
 
 
 // Browser-only point-cloud readers. Coordinates stay float64 until recentered.
-const UNIT_FACTORS={m:1,metre:1,meter:1,meters:1,meters:1,ft:.3048,feet:.3048,foot:.3048,'us-ft':1200/3937,us_survey_foot:1200/3937,mm:.001,cm:.01,in:.0254,inch:.0254,km:1000};
+const UNIT_FACTORS={m:1,metre:1,meter:1,meters:1,metres:1,ft:.3048,feet:.3048,foot:.3048,'us-ft':1200/3937,us_survey_foot:1200/3937,mm:.001,cm:.01,in:.0254,inch:.0254,km:1000};
 let importOptions={},originalClasses=null,originalIntensity=null;
-function unitFactor(name){const key=String(name).trim().toLowerCase();if(!(key in UNIT_FACTORS))throw Error('Unknown coordinate unit: '+name+'. Convert the file to meters before uploading.');return UNIT_FACTORS[key];}
+function unitFactor(name){const key=String(name).trim().toLowerCase();if(!Object.hasOwn(UNIT_FACTORS,key))throw Error('Unknown coordinate unit: '+name+'. Convert the file to meters before uploading.');return UNIT_FACTORS[key];}
 function wktUnits(text){
  const root=parseWkt(text),result={factors:[1,1,1],known:false,geographic:false};
  function inspect(node){if(!node||typeof node!=='object')return;
@@ -549,7 +562,7 @@ const fieldName=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 const aliases={x:['x','easting','longitude','lon'],y:['y','northing','latitude','lat'],z:['z','height','elevation','altitude'],r:['r','red','diffusered'],g:['g','green','diffusegreen'],b:['b','blue','diffuseblue'],i:['i','intensity','reflectance','scalarintensity'],c:['class','classification','scalarclassification']};
 function mapping(names){return Object.fromEntries(Object.entries(aliases).map(([key,values])=>[key,names.findIndex(n=>values.includes(fieldName(n)))]));}
 function allocateRecords(count,names){if(!Number.isSafeInteger(count)||count<1)throw Error('Invalid point count.');const map=mapping(names);if([map.x,map.y,map.z].some(i=>i<0))throw Error('Point cloud requires X, Y and Z coordinate fields.');return {map,xyz:new Float64Array(count*3),rgb:map.r>=0&&map.g>=0&&map.b>=0?new Float64Array(count*3):null,intensity:map.i>=0?new Float64Array(count):null,classes:map.c>=0?new Uint8Array(count):null};}
-function putRecord(out,row,i){const m=out.map;for(let k=0;k<3;k++){const v=Number(row[[m.x,m.y,m.z][k]]);if(!Number.isFinite(v))throw Error('Invalid XYZ value at point '+(i+1));out.xyz[3*i+k]=v;}if(out.rgb)for(let k=0;k<3;k++){const v=Number(row[[m.r,m.g,m.b][k]]);if(!Number.isFinite(v)||v<0||v>65535)throw Error('Invalid RGB value at point '+(i+1));out.rgb[3*i+k]=v;}if(out.intensity){const v=Number(row[m.i]);if(!Number.isFinite(v))throw Error('Invalid intensity at point '+(i+1));out.intensity[i]=v;}if(out.classes){const v=Number(row[m.c]);if(!Number.isInteger(v)||v<0||v>255)throw Error('Invalid classification at point '+(i+1));out.classes[i]=v;}}
+function putRecord(out,row,i){const m=out.map;for(let k=0;k<3;k++){const v=recordNumber(row[[m.x,m.y,m.z][k]]);if(!Number.isFinite(v))throw Error('Invalid XYZ value at point '+(i+1));out.xyz[3*i+k]=v;}if(out.rgb)for(let k=0;k<3;k++){const v=recordNumber(row[[m.r,m.g,m.b][k]]);if(!Number.isFinite(v)||v<0||v>65535)throw Error('Invalid RGB value at point '+(i+1));out.rgb[3*i+k]=v;}if(out.intensity){const v=recordNumber(row[m.i]);if(!Number.isFinite(v))throw Error('Invalid intensity at point '+(i+1));out.intensity[i]=v;}if(out.classes){const v=recordNumber(row[m.c]);if(!Number.isInteger(v)||v<0||v>255)throw Error('Invalid classification at point '+(i+1));out.classes[i]=v;}}
 function finishRecords(out,meta){if(out.rgb){let max=0;for(const x of out.rgb)max=Math.max(max,x);if(!importOptions.appearance&&max>0&&max<=1)for(let i=0;i<out.rgb.length;i++)out.rgb[i]*=65535;}
  // General formats allow floating/signed intensity; normalize to the LAS display domain.
  if(out.intensity&&importOptions.appearance){out.intensity=Uint16Array.from(out.intensity);}
@@ -557,7 +570,13 @@ function finishRecords(out,meta){if(out.rgb){let max=0;for(const x of out.rgb)ma
  finishCloud(out.xyz,out.rgb,out.intensity,out.classes,meta);
 }
 function* lines(text){let start=0;while(start<text.length){let end=text.indexOf('\n',start);if(end<0)end=text.length;yield text.slice(start,end).trim();start=end+1;}}
-const splitRow=line=>line.split(/[,;\s]+/).map(s=>s.replace(/^"|"$/g,''));
+function splitRow(line){
+ if(!/[,;]/.test(line))return line.trim().split(/\s+/).map(s=>s.replace(/^"|"$/g,''));
+ const delimiter=line.includes(',')?',':';',fields=[];let text='',quoted=false;
+ for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(quoted&&line[i+1]==='"'){text+='"';i++;}else quoted=!quoted;}else if(c===delimiter&&!quoted){fields.push(text.trim());text='';}else text+=c;}
+ if(quoted)throw Error('Unclosed point-cloud CSV quote.');fields.push(text.trim());return fields;
+}
+function recordNumber(value){return value===null||value===undefined||typeof value==='boolean'||(typeof value==='string'&&!value.trim())?NaN:Number(value);}
 function textMetadata(text){const m=text.match(/(?:units?|lengthunit)\s*[:= ]\s*["']?([a-z_-]+)/i);return m?{units:m[1],known:true}:{};}
 function readTextCloud(buffer,name){const text=new TextDecoder('utf-8',{fatal:true}).decode(buffer),meta=textMetadata(text.slice(0,4096));let names=null,count=0,declared=null;
  for(const line of lines(text)){if(!line||line.startsWith('#')||line.startsWith('//'))continue;const row=splitRow(line);if(!names){if(row.length===1&&/^\d+$/.test(row[0])){declared=Number(row[0]);continue;}if(row.slice(0,3).some(x=>!Number.isFinite(Number(x)))){names=row;continue;}names=row.length===7?['x','y','z','intensity','red','green','blue']:row.length===6?['x','y','z','red','green','blue']:row.length===4?['x','y','z','intensity']:['x','y','z'];}count++;}
@@ -763,7 +782,8 @@ function makeState(message){
  postMessage({type:'state',id,record,replica,coordinates,attributes},[coordinates.buffer,attributes.buffer]);
 }
 async function streamTemporaryLAS(file,first){
- const v=new DataView(first),offset=v.getUint32(96,true);
+ if(first.byteLength<227)throw Error('The LAS header is truncated.');
+  const v=new DataView(first),offset=v.getUint32(96,true);
  if(offset>64*1024*1024)throw Error('LAS metadata exceeds the 64 MiB header budget.');
  const header=offset<=first.byteLength?first.slice(0,offset):await file.slice(0,offset).arrayBuffer();
  const h=lasHeader(header,file.size,false);
@@ -877,9 +897,10 @@ function updateMoment(a,k,z,e){
  const n=++a[k],dz=z-a[k+1],de=e-a[k+2];a[k+1]+=dz/n;a[k+2]+=de/n;
  a[k+3]+=dz*(z-a[k+1]);a[k+4]+=de*(e-a[k+2]);a[k+5]+=dz*(e-a[k+2]);
 }
+// Population variance of all retained points; a singleton has zero variance.
 function momentValue(a,k,sigma){
  const n=a[k];if(!n)return {n:0,mean:NaN,variance:NaN};
- return {n,mean:a[k+1]+sigma*a[k+2],variance:n>1?Math.max(0,(a[k+3]+2*sigma*a[k+5]+sigma*sigma*a[k+4])/(n-1)):NaN};
+ return {n,mean:a[k+1]+sigma*a[k+2],variance:Math.max(0,(a[k+3]+2*sigma*a[k+5]+sigma*sigma*a[k+4])/n)};
 }
 class DSMGrid{
  constructor(res){this.res=res;this.tiles=new Map();this.valid=0;this.excluded=0;this.total=0;this.hist=new Float64Array(64);this.noise=new Float64Array(6);this.bounds=[Infinity,Infinity,-Infinity,-Infinity];}
@@ -914,14 +935,19 @@ function solve3(A,b){
  for(let i=0;i<3;i++)if(i!==k){const f=q[i][k];for(let j=k;j<4;j++)q[i][j]-=f*q[k][j];}}
  return q.map(r=>r[3]);
 }
+// fit[0] is the vertical residual at the checkpoint XY, not perpendicular
+// distance to the fitted plane. Both metrics use the same supported checkpoints.
+// Population moments throughout: RMSE_z^2 = mean_z^2 + sigma_z^2.
 function checkpointStats(acc,sigma){
  const rows=acc.rows.map(p=>{const a=p.a,n=a[0];if(n<6)return {label:p.label,n,supported:false};
  const A=[[n,a[1],a[2]],[a[1],a[3],a[5]],[a[2],a[5],a[4]]],b=[a[6]+sigma*a[9],a[7]+sigma*a[10],a[8]+sigma*a[11]],fit=solve3(A,b);
  if(!fit)return {label:p.label,n,supported:false};
- const ss=a[12]+2*sigma*a[14]+sigma*sigma*a[13],rms=Math.sqrt(Math.max(0,(ss-fit.reduce((v,x,i)=>v+x*b[i],0))/(n-3)));
+ const ss=a[12]+2*sigma*a[14]+sigma*sigma*a[13],rms=Math.sqrt(Math.max(0,(ss-fit.reduce((v,x,i)=>v+x*b[i],0))/n));
  return {label:p.label,n,supported:true,residual:fit[0],planeRMS:rms,slope:Math.hypot(fit[1],fit[2])};});
  const residuals=rows.filter(r=>r.supported).map(r=>r.residual),n=residuals.length,mean=n?residuals.reduce((a,b)=>a+b,0)/n:NaN;
- return {rows,n,mean,rmse:n?Math.sqrt(residuals.reduce((a,b)=>a+b*b,0)/n):NaN,sigma:n>1?Math.sqrt(residuals.reduce((s,x)=>s+(x-mean)**2,0)/(n-1)):NaN};
+ const spread=n?Math.sqrt(residuals.reduce((s,x)=>s+(x-mean)**2,0)/n):NaN;
+ // This population identity includes bias and preserves RMSE >= Sigma at zero bias.
+ return {rows,n,mean,rmse:Math.hypot(mean,spread),sigma:spread};
 }
 async function* dsmLines(file,offset=0){
  const reader=file.slice(offset).stream().getReader(),decoder=new TextDecoder('utf-8',{fatal:true});let remainder='';
@@ -968,6 +994,7 @@ async function describeDSM(file,options){
  const first=await file.slice(0,Math.min(file.size,1048576)).arrayBuffer(),head=new TextDecoder().decode(new Uint8Array(first,0,Math.min(200,first.byteLength))).trimStart();
  let info={kind:'text',file,crs:null,meta:{}};
  if(head.startsWith('LASF')){
+  if(first.byteLength<227)throw Error('The LAS header is truncated.');
   const v=new DataView(first),offset=v.getUint32(96,true);if(offset>64*1024*1024)throw Error('LAS metadata exceeds the 64 MiB header budget.');
   const header=offset<=first.byteLength?first.slice(0,offset):await file.slice(0,offset).arrayBuffer();
   const h=lasHeader(header,file.size,false);
@@ -1053,7 +1080,7 @@ function changeStatistics(values,cellArea){
  const sorted=Float64Array.from(values).sort(),median=n%2?sorted[(n-1)/2]:(sorted[n/2-1]+sorted[n/2])/2;
  return {n,mean,rmse:Math.sqrt(squares/n),sigma:Math.sqrt(Math.max(0,m2/n)),median,min,max,area:n*cellArea,netVolume:sum*cellArea};
 }
-// Vertical-normal M3C2 LoD95 (Lague et al., 2013, Eq. 1). Checkpoint
+// Vertical-normal M3C2-style LoD95, with population local variances. Checkpoint
 // quadrature provides the registration term when valid checkpoints exist.
 // Direct checkpoint propagation uses 1.96 * hypot(error1, error2), without
 // dividing survey accuracy by the number of cloud points in a DSM cell.
@@ -1062,20 +1089,37 @@ function calculateDSM(view={}){
  const sigma=Number(view.sigmaCm||0)/100;if(!Number.isFinite(sigma)||sigma<0||sigma>.5)throw Error('Noise sigma must be between 0 and 50 cm.');
  const cp=dsmCheckpoints.map(c=>checkpointStats(c,sigma)),haveCP=dsmCheckpoints.some(c=>c.rows.length),cpMetric=view.cpMetric==='sigma'?'sigma':'rmse';
  const uncertainty=view.uncertainty==='checkpoints'?'checkpoints':'m3c2',validCP=cp.every(c=>Number.isFinite(c[cpMetric]));
- const registration=validCP?Math.hypot(cp[0][cpMetric],cp[1][cpMetric]):haveCP?NaN:0;
- if(view.filter&&((uncertainty==='checkpoints'&&!validCP)||(uncertainty==='m3c2'&&haveCP&&!validCP)))throw Error(cpMetric==='sigma'?'Sigma propagation requires at least two valid checkpoints per survey.':'RMSE propagation requires at least one valid checkpoint per survey.');
- const checkpointThreshold=validCP?1.96*registration:NaN;
+ const metricComparison=Object.fromEntries(['rmse','sigma'].map(metric=>{
+  const available=cp.every(c=>Number.isFinite(c[metric]));
+  const registration=available?Math.hypot(cp[0][metric],cp[1][metric]):haveCP?NaN:0;
+  return [metric,{registration,checkpointThreshold:available?1.96*registration:NaN,evaluated:0,significant:0,masked:0,unassessed:0,thresholds:{n:0,mean:0,min:Infinity,max:-Infinity}}];
+ }));
+ const comparisonEntries=Object.entries(metricComparison),registration=metricComparison[cpMetric].registration;
+ if(view.filter&&((uncertainty==='checkpoints'&&!validCP)||(uncertainty==='m3c2'&&haveCP&&!validCP)))throw Error('Population '+(cpMetric==='sigma'?'Sigma':'RMSE')+' propagation requires at least one valid checkpoint per survey.');
+ const checkpointThreshold=metricComparison[cpMetric].checkpointThreshold;
  const [pre,post]=dsmEpochs,res=dsmOptions.resolution,cellArea=res*res;
  const rows=[],raw=[],kept=[],thresholds={n:0,mean:0,min:Infinity,max:-Infinity},bounds=[Infinity,Infinity,-Infinity,-Infinity];let evaluated=0,significant=0,preCells=0,postCells=0;
  function append(ix,iy,p,q){
   const empty={n:0,mean:NaN,variance:NaN},a=p?momentValue(p.a,p.k,sigma):empty,b=q?momentValue(q.a,q.k,sigma):empty;
   const paired=a.n>0&&b.n>0,difference=paired?b.mean-a.mean:NaN;
   const ca=p?momentValue(p.a,p.k+6,sigma):empty,cb=q?momentValue(q.a,q.k+6,sigma):empty;
-  const m3c2LoD=paired&&ca.n>=5&&cb.n>=5?1.96*(Math.sqrt(ca.variance/ca.n+cb.variance/cb.n)+registration):NaN;
+  const localSE=paired&&ca.n>=5&&cb.n>=5?Math.sqrt(ca.variance/ca.n+cb.variance/cb.n):NaN;
+  const m3c2LoD=1.96*(localSE+registration);
   const threshold=paired?(uncertainty==='checkpoints'?checkpointThreshold:m3c2LoD):NaN;
   const valid=paired&&Number.isFinite(threshold),passes=valid&&Math.abs(difference)>threshold;
   if(valid){evaluated++;thresholds.n++;thresholds.mean+=(threshold-thresholds.mean)/thresholds.n;thresholds.min=Math.min(thresholds.min,threshold);thresholds.max=Math.max(thresholds.max,threshold);}if(passes)significant++;
-  if(paired){raw.push(difference);if(passes)kept.push(difference);}
+  if(paired){
+   raw.push(difference);if(passes)kept.push(difference);
+   // Compare both metrics on exactly the same vertical differences, support,
+   // noise realization and local standard error as the selected map threshold.
+   for(const [metric,c] of comparisonEntries){
+    const t=metric===cpMetric?threshold:uncertainty==='checkpoints'?c.checkpointThreshold:1.96*(localSE+c.registration);
+    if(Number.isFinite(t)){
+     c.evaluated++;const s=c.thresholds;s.n++;s.mean+=(t-s.mean)/s.n;s.min=Math.min(s.min,t);s.max=Math.max(s.max,t);
+     if(Math.abs(difference)>t)c.significant++;
+    }
+   }
+  }
   // One threshold and one significance flag drive rendering and all metrics.
   rows.push(ix,iy,difference,threshold,paired?cb.mean-ca.mean:NaN,m3c2LoD,valid?(passes?2:1):0,a.n,b.n,a.mean,b.mean);
   bounds[0]=Math.min(bounds[0],ix);bounds[1]=Math.min(bounds[1],iy);bounds[2]=Math.max(bounds[2],ix);bounds[3]=Math.max(bounds[3],iy);
@@ -1086,8 +1130,12 @@ function calculateDSM(view={}){
  const histogram=Float64Array.from(pre.hist,(v,i)=>v+post.hist[i]),count=pre.valid+post.valid;
  const pooledMean=(pre.noise[1]*pre.valid+post.noise[1]*post.valid)/count;
  const pooledM2=pre.noise[3]+post.noise[3]+pre.valid*(pre.noise[1]-pooledMean)**2+post.valid*(post.noise[1]-pooledMean)**2;
+ for(const c of Object.values(metricComparison)){
+  c.masked=raw.length-c.significant;c.unassessed=raw.length-c.evaluated;
+  if(!c.thresholds.n)c.thresholds={n:0,mean:null,min:null,max:null};
+ }
  const rawStats=changeStatistics(raw,cellArea),screened=changeStatistics(kept,cellArea);
- return {type:'dsmResult',rows:Float64Array.from(rows),stride:11,resolution:res,bounds,sigmaCm:sigma*100,filter:!!view.filter,cpMetric,uncertainty,registration,checkpointThreshold,
+ return {type:'dsmResult',rows:Float64Array.from(rows),stride:11,resolution:res,bounds,sigmaCm:sigma*100,filter:!!view.filter,cpMetric,uncertainty,registration,checkpointThreshold,metricComparison,
   raw:rawStats,screened,shown:view.filter?screened:rawStats,thresholds:thresholds.n?thresholds:{n:0,mean:null,min:null,max:null},evaluated,significant,overlap:raw.length,preCells,postCells,
   epochs:dsmEpochs.map(g=>({name:g.name,read:g.read,valid:g.valid,excluded:g.excluded,unitNote:g.unitNote})),
   checkpoints:cp,histogram,histogramCount:count,noiseMeanCm:pooledMean*sigma*100,noiseSigmaCm:Math.sqrt(pooledM2/count)*sigma*100,
@@ -1796,26 +1844,93 @@ function thresholdNumber(value){
  const unit=selectedUnit('dsmMetricUnits'),v=value*dsmUnitFactors[unit];
  return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:6})+' '+unit;
 }
+// Build notation from text nodes so source labels cannot inject HTML.
+function setScientificText(element,value){
+ const text=String(value),pattern=/LoD95%|RMSEz|Sigmaz|Mean Bias z/g;let start=0;
+ element.replaceChildren();
+ for(const match of text.matchAll(pattern)){
+  element.append(document.createTextNode(text.slice(start,match.index)));
+  const token=match[0],base=token==='LoD95%'?'LoD':token==='Mean Bias z'?'Mean Bias':token.slice(0,-1);
+  element.append(document.createTextNode(base));
+  const sub=document.createElement('sub');sub.textContent=token==='LoD95%'?'95%':'z';element.append(sub);
+  start=match.index+token.length;
+ }
+ element.append(document.createTextNode(text.slice(start)));
+}
+// Native option popups discard subscript markup. Keep the select as the value
+// model and enhance its two choices with a keyboard-accessible formatted list.
+function enhanceScientificSelect(id){
+ const select=$(id),label=document.querySelector('label[for="'+id+'"]');
+ const wrap=document.createElement('div');wrap.className='scientific-select';select.after(wrap);
+ const button=document.createElement('button');button.type='button';button.id=id+'Button';button.className='scientific-trigger full';
+ button.setAttribute('role','combobox');button.setAttribute('aria-haspopup','listbox');button.setAttribute('aria-expanded','false');
+ const text=document.createElement('span');text.id=id+'Value';button.append(text);
+ const arrow=document.createElement('span');arrow.textContent='▾';arrow.setAttribute('aria-hidden','true');button.append(arrow);
+ label.id=id+'Label';label.htmlFor=button.id;button.setAttribute('aria-labelledby',label.id+' '+text.id);
+ const list=document.createElement('div');list.id=id+'Options';list.className='scientific-options';list.hidden=true;list.setAttribute('role','listbox');list.setAttribute('aria-labelledby',label.id);
+ button.setAttribute('aria-controls',list.id);
+ const items=Array.from(select.options,(option,i)=>{
+  const item=document.createElement('div');item.id=id+'Option'+i;item.setAttribute('role','option');item.dataset.value=option.value;
+  setScientificText(item,option.textContent);item.addEventListener('pointerdown',e=>e.preventDefault());
+  item.addEventListener('click',()=>commit(i));list.append(item);return item;
+ });
+ wrap.append(button,list);select.hidden=true;let active=select.selectedIndex;
+ function highlight(i){active=i;items.forEach((item,j)=>item.classList.toggle('active',j===i));button.setAttribute('aria-activedescendant',items[i].id);}
+ function close(){list.hidden=true;button.setAttribute('aria-expanded','false');button.removeAttribute('aria-activedescendant');}
+ function sync(){setScientificText(text,select.selectedOptions[0].textContent);items.forEach((item,i)=>item.setAttribute('aria-selected',String(i===select.selectedIndex)));if(!list.hidden)highlight(select.selectedIndex);}
+ function open(){list.hidden=false;button.setAttribute('aria-expanded','true');highlight(select.selectedIndex);}
+ function commit(i){
+  const changed=select.selectedIndex!==i;select.selectedIndex=i;sync();close();button.focus({preventScroll:true});
+  if(changed){select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));}
+ }
+ button.addEventListener('click',()=>list.hidden?open():close());
+ button.addEventListener('keydown',event=>{
+  const key=event.key;
+  if(['ArrowDown','ArrowUp','Home','End'].includes(key)){
+   event.preventDefault();const closed=list.hidden;if(closed)open();
+   highlight(key==='Home'?0:key==='End'?items.length-1:closed?select.selectedIndex:Math.max(0,Math.min(items.length-1,active+(key==='ArrowDown'?1:-1))));
+  }else if(key==='Enter'||key===' '){event.preventDefault();if(list.hidden)open();else commit(active);}
+  else if(key==='Escape'&&!list.hidden){event.preventDefault();event.stopPropagation();close();}
+  else if(key==='Tab')close();
+  else if(key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey){
+   const i=Array.from(select.options).findIndex(option=>option.textContent.trim().toLowerCase().startsWith(key.toLowerCase()));
+   if(i>=0){event.preventDefault();if(list.hidden)commit(i);else highlight(i);}
+  }
+ });
+ document.addEventListener('pointerdown',event=>{if(!wrap.contains(event.target))close();});
+ wrap.addEventListener('focusout',event=>{if(!wrap.contains(event.relatedTarget))close();});
+ select.addEventListener('input',sync);select.addEventListener('change',sync);sync();
+}
+
 function showDSMMetrics(){
  const r=dsmResult,root=$('dsmMetrics');root.replaceChildren();if(!r)return;
  function table(caption,headers,rows){
   const t=document.createElement('table');t.createCaption().textContent=caption;const head=t.createTHead().insertRow();
-  for(const h of headers){const c=document.createElement('th');c.scope='col';c.textContent=h;head.append(c);}
-  for(const row of rows){const tr=t.insertRow();for(const x of row)tr.insertCell().textContent=x;}root.append(t);
+  for(const h of headers){const c=document.createElement('th');c.scope='col';setScientificText(c,h);head.append(c);}
+  for(const row of rows){const tr=t.insertRow();for(const x of row)setScientificText(tr.insertCell(),x);}root.append(t);
  }
  const metrics=[['No. of Cells','n',0],['Mean','mean',1],['RMSE','rmse',1],['Sigma','sigma',1],['Median','median',1],['Minimum','min',1],['Maximum','max',1],['Coverage Area','area',2],['Net Volume','netVolume',3]];
  table('DoD Metrics',['Metric','DoD (Standard)',...(r.filter?['DoD with Error Propagation']:[])],metrics.map(([label,k,p])=>[label,dsmNumber(r.raw[k],p),...(r.filter?[dsmNumber(r.screened[k],p)]:[])]));
- table('Vertical Accuracy Metrics Relative to Checkpoints',['Survey','Valid Points / Total Points','RMSE','Sigma','Mean'],r.checkpoints.map((c,i)=>['Survey '+(i+1),c.n+' / '+c.rows.length,dsmNumber(c.rmse),dsmNumber(c.sigma),dsmNumber(c.mean)]));
- const cpAvailable=Number.isFinite(r.checkpointThreshold),metric=r.cpMetric==='sigma'?'Sigma':'RMSE';
- const rows=[['Method',r.uncertainty==='m3c2'?'M3C2 LoD95% (Spatially Varying)':'Checkpoint Accuracy (Uniform)'],['Uncertainty Metric',metric],['Thresholds Applied',r.filter?'Yes':'No']];
+ table('Vertical Accuracy Metrics Relative to Checkpoints',['Survey','Valid Points / Total Points','RMSEz','Sigmaz','Mean Bias z'],r.checkpoints.map((c,i)=>['Survey '+(i+1),c.n+' / '+c.rows.length,dsmNumber(c.rmse),dsmNumber(c.sigma),dsmNumber(c.mean)]));
+ const cpAvailable=Number.isFinite(r.checkpointThreshold),metric=r.cpMetric==='sigma'?'Sigmaz':'RMSEz';
+ const rows=[['Method',r.uncertainty==='m3c2'?'Spatially Varying M3C2 LoD95%':'Uniform Checkpoint Accuracy'],['Vertical Checkpoint Metric',metric],['Thresholds Applied',r.filter?'Yes':'No']];
  for(let i=0;i<2;i++)rows.push(['Survey '+(i+1)+' '+metric,thresholdNumber(r.checkpoints[i][r.cpMetric])]);
  if(r.uncertainty==='m3c2'){
   rows.push(['Minimum Threshold',thresholdNumber(r.thresholds.min)],['Mean Threshold',thresholdNumber(r.thresholds.mean)],['Maximum Threshold',thresholdNumber(r.thresholds.max)]);
  }else rows.push(['Uniform Threshold',thresholdNumber(r.checkpointThreshold)]);
+ rows.push(['Paired Cells',dsmNumber(r.overlap,0)],['Cells Above Threshold',dsmNumber(r.significant,0)],['Cells At or Below Threshold',dsmNumber(r.evaluated-r.significant,0)],['Cells Without a Valid Threshold',dsmNumber(r.overlap-r.evaluated,0)]);
  table('Error Thresholds (95% CL)',['Metric','Value'],rows);
  const p=document.createElement('p');p.id='dsmThresholdSummary';
- p.textContent=r.uncertainty==='m3c2'?'LoD95% = 1.96 × (√(s₁²/n₁ + s₂²/n₂) + √(e₁² + e₂²)). Vertical neighborhoods use a radius of '+thresholdNumber(r.radius)+'.'+(cpAvailable?'':' No checkpoint term is available; thresholds use local sampling uncertainty only.'):'Threshold = 1.96 × √(e₁² + e₂²), using each survey’s checkpoint '+metric+'.';
+ p.textContent=r.uncertainty==='m3c2'?'LoD95% = 1.96 × (√(σ₁²/n₁ + σ₂²/n₂) + √(e₁² + e₂²)), using population local variances. Vertical neighborhoods use a radius of '+thresholdNumber(r.radius)+'.'+(cpAvailable?'':Number.isFinite(r.registration)?' No checkpoints are supplied; thresholds use local sampling uncertainty only.':' Checkpoint support is insufficient; thresholds are unavailable.'):'Threshold = 1.96 × √(e₁² + e₂²), using each survey’s checkpoint '+metric+'.';
+ p.textContent+=r.filter?' Retain only |Δz| > threshold; equality and unavailable thresholds are masked.':' Filtering is off; the standard DoD includes all paired cells.';
+ setScientificText(p,p.textContent);
  root.append(p);
+ const comparisonMetrics=['rmse','sigma'];
+ table('Checkpoint Metric Comparison',['Metric',...comparisonMetrics.map(k=>(k==='rmse'?'RMSEz':'Sigmaz')+(k===r.cpMetric?' (Selected)':''))],
+  [['Minimum Threshold',c=>thresholdNumber(c.thresholds.min)],['Maximum Threshold',c=>thresholdNumber(c.thresholds.max)],['Retained Cells',c=>dsmNumber(c.significant,0)],['Masked Cells',c=>dsmNumber(c.masked,0)],['Without a Valid Threshold',c=>dsmNumber(c.unassessed,0)]].map(([label,value])=>[label,...comparisonMetrics.map(k=>value(r.metricComparison[k]))]));
+ const note=document.createElement('p');note.id='dsmComparisonNote';
+ note.textContent='Comparison uses the current uncertainty method and the same paired cells. Counts show the result of applying each threshold, including when filtering is off. Masked counts include cells without a valid threshold.';
+ root.append(note);
 }
 function showDSMCell(clientX,clientY){
  if(!dsmResult||!dsmPixels||!dsmTransform){clearDSMReadout();return;}
@@ -1825,6 +1940,7 @@ function showDSMCell(clientX,clientY){
  const j=y*p.width+x;
  $('dsmMapReadout').textContent='Cell Value: '+(p.counts[j]?dsmNumber(p.sums[j]/p.counts[j]):'N/A');
 }
+for(const id of ['dsmUncertainty','dsmCPMetric'])enhanceScientificSelect(id);
 $('dsmRun').addEventListener('click',startDSM);
 $('dsmCancel').addEventListener('click',()=>{stopDSM();resetDSMDisplay();});
 for(const id of ['dsmPre','dsmPost','dsmCPPre','dsmCPPost'])$(id).addEventListener('change',scheduleDSM);
