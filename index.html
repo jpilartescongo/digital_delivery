@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Surface and Feature Modeling</title>
+<title>Point Cloud Visualization</title>
 <style>
 :root{color-scheme:dark;--bg:#090e16;--panel:#111925;--line:#283344;--muted:#acb8c9;--ink:#f3f5f8;--yellow:#ffdc35}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1510px;margin:auto;padding:36px 32px 48px}header{display:flex;align-items:end;justify-content:space-between;margin-bottom:26px}h1{font-size:clamp(26px,3vw,40px);font-weight:600;letter-spacing:-.035em;margin:7px 0 0}h2{font-size:20px;font-weight:600;margin:0}button,select,input{font:inherit}button,select{border:1px solid var(--line);background:#182231;color:var(--ink);border-radius:7px;padding:9px 12px}button{cursor:pointer;transition:background .15s,border-color .15s}button:hover{background:#253348}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}button[aria-pressed=true]{border-color:var(--yellow);background:#37331d;color:#ffe571}button:disabled,select:disabled{opacity:.4;cursor:default}.object-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.object-nav button{font-size:13px}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 298px;gap:18px}.scene-card{align-self:start}.scene-card,.controls{border:1px solid var(--line);border-radius:13px;background:var(--panel);overflow:hidden}.scene-head{padding:17px 21px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.scene-head button{padding:6px 15px}.scene{height:635px;position:relative;background:#080d14;touch-action:none}canvas,#measureOverlay{position:absolute;inset:0;width:100%;height:100%;display:block}#measureOverlay{pointer-events:none}.readout{position:absolute;top:20px;left:22px;font-size:14px;line-height:1.7;pointer-events:none;font-variant-numeric:tabular-nums}.readout b{font-weight:550}#fitReadout{position:absolute;left:22px;bottom:20px;color:var(--yellow);font-size:13px;pointer-events:none}#modelBadge{position:absolute;top:20px;right:20px;color:#d4bf7b;background:#111925d9;border:1px solid #4a4125;padding:5px 9px;border-radius:5px;font-size:11px;max-width:45%;text-align:right;pointer-events:none}#modelBadge:empty{display:none}#pickHint{position:absolute;left:22px;bottom:47px;color:#d8e2ef;font-size:12px;pointer-events:none;max-width:65%}#error{background:#531d27;color:white;padding:12px;display:none}.controls{padding:20px;align-self:start}.control-group+.control-group{border-top:1px solid var(--line);padding-top:18px;margin-top:18px}.control-label{display:flex;justify-content:space-between;font-size:12px;font-weight:650;letter-spacing:.02em;margin:0 0 9px;color:#dbe3ef}.control-label output{color:var(--yellow);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--yellow);margin:5px 0 8px}input[type=checkbox]{accent-color:var(--yellow)}.segments{display:flex;gap:5px}.segments button{flex:1;padding:8px 5px;font-size:12px}.full{width:100%}.row{display:flex;align-items:center;gap:8px;margin-top:11px}.row>*{min-width:0}.row button{flex:1;font-size:12px}.check{font-size:12px;color:#c8d2df;display:flex;gap:8px;align-items:center;margin-top:10px}.small{font-size:11px;color:var(--muted);line-height:1.55;margin:8px 0 0}select{font-size:13px}.range-ends{display:flex;justify-content:space-between;color:#8695a8;font-size:10px;margin-top:-8px}#measurementValue{min-height:22px;font-size:14px;color:#c8eaff;font-variant-numeric:tabular-nums}a{color:#c0d6f9;text-underline-offset:4px}a:hover{color:white}#rulerLabel{fill:#aebaca;font-size:11px}.measurement-label{fill:#daf1ff;font-size:13px;paint-order:stroke;stroke:#080d14;stroke-width:4px;stroke-linejoin:round}@media(max-width:900px){main{padding:23px 16px}.workspace{grid-template-columns:1fr}.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px}.control-group+.control-group{margin:0;padding:0;border:0}.scene{height:540px}}@media(max-width:540px){header{display:block}.scene{height:480px}.controls{grid-template-columns:1fr}.control-group+.control-group{border-top:1px solid var(--line);padding-top:16px}.scene-head{padding:13px}h2{font-size:18px}.object-nav{gap:5px}.object-nav button{font-size:11px;padding:8px}.readout{left:14px;top:14px;font-size:12px}#modelBadge{font-size:10px;right:10px;top:14px;max-width:43%}#fitReadout{left:14px;font-size:12px}}
 
@@ -67,7 +67,6 @@ main{max-width:1680px;padding:28px 28px 42px}
 #dsmMapReadout{min-height:32px}
 .dsm-scale{min-height:40px;flex:none}
 .dsm-tables caption{text-align:left;font-size:16px;font-weight:600;padding:10px 0}
-#dsmThresholdSummary,#dsmComparisonNote{color:var(--muted);font-size:13px}
 sub{font-size:75%;line-height:0;vertical-align:sub}
 .scientific-select{position:relative;min-width:0}
 .scientific-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;font-size:12px;padding:8px;min-height:36px}
@@ -110,8 +109,13 @@ sub{font-size:75%;line-height:0;vertical-align:sub}
 #dsmPalettePreview{flex:0 0 100px;height:16px;border:1px solid #8491a3;border-radius:4px}
 #dsmStatus:empty{display:none}
 
+input[type=range]:disabled{opacity:.4;cursor:default}
+.lod-options{font-size:10px;gap:4px}
+.metric-options{margin-bottom:4px}
+#dsmMeasureOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+#dsmMeasureOverlay .measurement-label{font-size:14px}
 </style></head><body><main>
-<header><h1>Surface and Feature Modeling</h1></header>
+<header><h1>Point Cloud Visualization</h1></header>
 <nav class="object-nav" id="objects" aria-label="Select an object"><button id="uploadTemporary" type="button" title="Up to 500 MB (524,288,000 bytes)">Upload Temporary File</button></nav>
 <input id="temporaryFile" type="file" hidden>
 <div id="temporaryTools" class="temporary-tools" hidden><span id="temporaryStatus" role="status" aria-live="polite"></span><button id="cancelTemporary" type="button" hidden>Cancel</button><button id="clearTemporary" type="button" hidden>Clear Temporary File</button></div>
@@ -128,7 +132,7 @@ sub{font-size:75%;line-height:0;vertical-align:sub}
 <label class="control-label" for="elevation" style="margin-top:15px">Viewing Height <output id="elevationValue"></output></label><input id="elevation" type="range" min="-10" max="85" step="1" value="10">
 <label class="control-label" for="azimuth">Viewing Angle <output id="azimuthValue"></output></label><input id="azimuth" type="range" min="0" max="360" step="1" value="0"><button class="full" id="reset" style="font-size:12px">Reset View</button></div>
 <div class="control-group"><div class="control-label">Feature Representation</div><div class="row" style="margin-top:0"><button id="replica" aria-pressed="false">3D Replica</button></div><div class="row"><button id="colorToggle" aria-pressed="true">Color: On</button><button id="intensityToggle" aria-pressed="false">Intensity: Off</button></div>
-<label id="lodLabel" class="control-label" for="lod" style="margin-top:14px">Level of Development</label><select id="lod" class="full" disabled><option value="100" selected>LOD 100 · Base Geometry</option><option value="200">LOD 200 · Structural Detail</option><option value="300">LOD 300 · Components</option><option value="400">LOD 400 · Fine Detail</option><option value="500">LOD 500 · Highest Detail</option></select><p id="representationNote" class="small" role="status" aria-live="polite"></p><details id="materialReference" hidden><summary class="small">Material Reference</summary><img id="materialReferenceImage" alt="Photographic material reference" style="max-width:100%;max-height:190px;display:block;margin-top:8px"></details></div>
+<label id="lodLabel" class="control-label" for="lod" style="margin-top:14px">Level of Development (LOD)</label><input id="lod" type="range" min="100" max="500" step="100" value="100" aria-valuetext="LOD100" disabled><div class="range-ends lod-options"><span>LOD100</span><span>LOD200</span><span>LOD300</span><span>LOD400</span><span>LOD500</span></div><details id="materialReference" hidden><summary class="small">Material Reference</summary><img id="materialReferenceImage" alt="Photographic material reference" style="max-width:100%;max-height:190px;display:block;margin-top:8px"></details></div>
 <div class="control-group"><label class="control-label" for="measure">Measurements</label><select class="full" id="measure"><option value="off">Measurements Off</option><option value="distance">Point to Point Distance</option><option value="polyline">Polyline Length</option><option value="volume">Polygon Volume</option></select><div id="volumeControls" hidden><label class="small" for="volumeBase">Base Height Above Object Minimum (m)</label><input id="volumeBase" type="number" value="0" step="0.01" class="full"><label class="small" for="volumeCell">Surface Grid (cm)</label><input id="volumeCell" type="number" value="2" min="0.1" max="1000" step="0.1" class="full"><p class="small">Click at least three points around a footprint. Volume uses the observed upper surface above the horizontal base. Empty cells remain unmeasured.</p></div><div id="measurementValue" aria-live="polite"></div><div class="row"><button id="undo">Undo</button><button id="clear">Clear</button></div></div>
 <div class="control-group" id="extentControls">
 <button id="selectExtent" class="full" type="button" aria-pressed="false">Select Extent</button>
@@ -139,7 +143,7 @@ sub{font-size:75%;line-height:0;vertical-align:sub}
 
 <hr class="section-divider">
 <section id="dsmWorkspace" aria-labelledby="dsmHeading">
-<header class="dsm-heading"><h2 id="dsmHeading">Change Detection Assessments</h2><button id="dsmCancel" disabled>Cancel</button></header>
+<header class="dsm-heading"><h2 id="dsmHeading">Change Detection</h2><button id="dsmCancel" disabled>Cancel</button></header>
 <div class="dsm-inputs">
 <label>Survey 1 (Reference)<input id="dsmPre" type="file" accept=".las,.laz,.ply,.xyz,.csv,.txt,.pts"></label>
 <label>Survey 2 (Compared)<input id="dsmPost" type="file" accept=".las,.laz,.ply,.xyz,.csv,.txt,.pts"></label>
@@ -151,6 +155,7 @@ sub{font-size:75%;line-height:0;vertical-align:sub}
 <section class="scene-card">
 <div class="scene-head"><h3 id="dsmMapTitle">DoD (Standard)</h3><button id="dsmResetMap">Reset Map</button></div>
 <div class="dsm-map-wrap"><canvas id="dsmMap" aria-label="Top-down survey map. Drag to rotate; Shift-drag or right-drag to pan; scroll to zoom." title="Drag to rotate · Shift-drag or right-drag to pan · Scroll to zoom"></canvas>
+<svg id="dsmMeasureOverlay" aria-label="Map distance measurement"></svg>
 <div class="dsm-hist"><strong>Added Vertical Error</strong><canvas id="dsmHistogram" aria-label="Histogram of added vertical errors"></canvas><div id="dsmHistReadout" class="small">Sigma: 0.00 cm</div></div>
 <div class="map-north" role="img" aria-label="North"><span>N</span><svg viewBox="0 0 30 46" aria-hidden="true"><path d="M15 1 L28 43 L15 34 L2 43 Z" fill="#f3f5f8"/><path d="M15 1 L15 34 L2 43 Z" fill="#8295b1"/></svg></div>
 <div id="dsmScaleBar" class="map-distance" hidden><div id="dsmScaleBarLine"></div><span id="dsmScaleBarLabel"></span></div>
@@ -166,13 +171,14 @@ sub{font-size:75%;line-height:0;vertical-align:sub}
 <div class="control-group">
 <label class="check"><input id="dsmFilter" type="checkbox">Apply Uncertainty Thresholds (95% CL)</label>
 <label class="small" for="dsmUncertainty">Uncertainty Method</label><select id="dsmUncertainty" class="full"><option value="m3c2">Spatially Varying M3C2 LoD95%</option><option value="checkpoints">Uniform Checkpoint Accuracy</option></select>
-<label class="small" for="dsmCPMetric">Vertical Checkpoint Metric</label><select id="dsmCPMetric" class="full"><option value="rmse">RMSEz</option><option value="sigma">Sigmaz</option></select>
+<label class="small" for="dsmCPMetric">Vertical Checkpoint Metric</label><input id="dsmCPMetric" type="range" min="0" max="1" step="1" value="0" aria-valuetext="RMSE z"><div class="range-ends metric-options"><span>RMSE<sub>z</sub></span><span>Sigma<sub>z</sub></span></div>
 </div>
 <div class="control-group"><label class="control-label" for="dsmNoise">Precision Degradation (Gaussian Noise) <output id="dsmNoiseValue">0.00 cm</output></label><input id="dsmNoise" type="range" min="0" max="50" step="1" value="0"><div class="range-ends"><span>0.00 cm</span><span>50.00 cm</span></div></div>
 <div class="control-group">
 <label class="small" for="dsmLayer">Feature to Visualize</label><select id="dsmLayer" class="full"><option value="survey1">Survey 1</option><option value="survey2">Survey 2</option><option value="dod" selected>DoD (Standard)</option><option value="propagated">DoD with Error Propagation</option></select>
 <label class="small" for="dsmPalette">Symbology</label><div class="symbology-options"><select id="dsmPalette" class="full"><option value="diverging">Blue-White-Red</option><option value="bwr">BWR</option><option value="cividis">Cividis</option><option value="coolwarm">Cool to Warm</option><option value="plasma">Plasma</option><option value="precipitation">Precipitation</option><option value="PRGn">PRGN</option><option value="seismic">Seismic</option><option value="viridis">Viridis</option></select><div id="dsmPalettePreview" role="img" aria-label="Symbology color preview"></div></div>
 <label class="check" style="margin-top:10px"><input id="dsmColorblind" type="checkbox">Colorblind Safe</label></div>
+<div class="control-group"><button id="dsmMeasure" class="full" type="button" aria-pressed="false">Measure Distances: Off</button></div>
 <div class="control-group"><label class="control-label" for="dsmMetricUnits">Display Units <output id="dsmMetricUnitsValue">Meters</output></label><input id="dsmMetricUnits" type="range" min="0" max="1" step="1" value="0" aria-valuetext="Meters"><div class="range-ends"><span>Meters</span><span>Centimeters</span></div></div>
 </aside></div>
 <p id="dsmStatus" role="status" aria-live="polite"></p>
@@ -1321,6 +1327,7 @@ function twinMaterial(part,name,lod){
  if(part.vertexColors)p.vertexColors=part.vertexColors.map(visibleMaterialColor);
  if(lod<400)return p;
  const tag=p.tag||'',n=String(name).toLowerCase();let c=p.color||REPLICA_COLOR,m=1;
+ if(lod===500&&/cone/.test(n)&&tag==='base')return {...p,color:[.025,.025,.025],vertexColors:undefined,material:8};
  if(/cone/.test(n)){c=/reflective-band/.test(tag)?[.93,.94,.91]:[.94,.105,.025];m=/reflective-band/.test(tag)?2:1;}
  else if(/plywood|wood|sheet/.test(n)){c=[.68,.43,.20];m=4;if(/fastener/.test(tag)){c=[.68,.70,.72];m=3;}}
  else if(/cylinder|cans/.test(n)){c=[.66,.69,.72];m=3;}
@@ -1362,16 +1369,13 @@ function syncUI(){const o=objects[state.object];
  const referenceKey=/cone/i.test(o.title)?'traffic_cone':/can/i.test(o.title)?'cylinder_can':/plywood/i.test(o.title)?'plywood_sheet':/tripod/i.test(o.title)?'tripod':null;
  $('materialReference').hidden=!(state.mode==='replica'&&state.lod>=400&&materialReferences[referenceKey]);
  if(referenceKey&&materialReferences[referenceKey]&&$('materialReferenceImage').src!==materialReferences[referenceKey])$('materialReferenceImage').src=materialReferences[referenceKey];
-syncAppearance();$('objectTitle').textContent=o.title;$('levelReadout').textContent='Decimation: '+Number((100*(1-activeRecord.count/o.sourceCount)).toFixed(2))+'%'+(Math.abs(100*(1-activeRecord.count/o.sourceCount)-state.level)>.01?' (target '+state.level+'%)':'');$('countReadout').textContent=`No. of Points: ${activeRecord.count.toLocaleString('en-US')}`;$('fitReadout').textContent=state.mode!=='points'?`${(meshCount/3).toLocaleString()} triangles`+(activeRecord.detail?.cellSize?` · Surface Cell ${activeRecord.detail.cellSize.toFixed(2)} m`:''):state.showFit?(activeRecord.supported?(o.temporary?`Fitted Envelope: ${activeRecord.parameters.dimensions_m?.map(v=>v.toFixed(2)).join(' × ')||''} m`:`Fit RMS: ${activeRecord.rmsCm.toFixed(2)} cm`):'Fit Unsupported'):'';
+syncAppearance();$('objectTitle').textContent=o.title;$('levelReadout').textContent='Decimation: '+Number((100*(1-activeRecord.count/o.sourceCount)).toFixed(2))+'%'+(Math.abs(100*(1-activeRecord.count/o.sourceCount)-state.level)>.01?' (target '+state.level+'%)':'');$('countReadout').textContent=`No. of Points: ${activeRecord.count.toLocaleString('en-US')}`;$('fitReadout').textContent=state.mode!=='points'?'':state.showFit?(activeRecord.supported?(o.temporary?`Fitted Envelope: ${activeRecord.parameters.dimensions_m?.map(v=>v.toFixed(2)).join(' × ')||''} m`:`Fit RMS: ${activeRecord.rmsCm.toFixed(2)} cm`):'Fit Unsupported'):'';
  $('fitReadout').title=o.temporary?'Restored fitted component envelopes.':'Original object-specific fitted surfaces.';
  $('decimation').value=state.level;$('decimationValue').textContent=state.level+'%';document.querySelectorAll('[data-speed]').forEach(b=>{b.setAttribute('aria-pressed',Number(b.dataset.speed)===state.speed);b.disabled=state.measure!=='off';});$('elevation').value=Math.round(state.elevation);$('elevationValue').textContent=state.elevation.toFixed(2)+'\u00b0';$('azimuth').value=Math.round((state.azimuth+360)%360);$('azimuthValue').textContent=((state.azimuth+360)%360).toFixed(2)+'\u00b0';$('play').textContent=state.playing?'Play: On':'Rotation: Off';$('play').setAttribute('aria-pressed',String(state.playing));$('play').disabled=state.measure!=='off';$('replica').setAttribute('aria-pressed',state.mode==='replica');$('showFit').textContent=state.showFit?'Fit Shape: On':'Fit Shape: Off';$('showFit').setAttribute('aria-pressed',String(state.showFit));$('showFit').disabled=state.mode!=='points';$('lod').value=String(state.lod);$('lod').disabled=state.mode!=='replica';$('measure').value=state.measure;$('undo').disabled=$('clear').disabled=!measurements.length;
- $('modelBadge').textContent=state.mode==='replica'?`LOD ${state.lod}`:'';
- $('lodLabel').textContent=o.temporary?'Level of Detail':'Level of Development';
- const descriptions={100:'Base Geometry · Former LOD 300',200:'Sharper Structure · Edges and Rims',300:'Functional Details · Connections and Components',400:'Fine Geometry · Profiles and Protective Hardware',500:'Highest Detail · Scan Surface and Finishing Hardware'};
- $('representationNote').textContent=state.mode==='replica'?descriptions[state.lod]+(o.temporary?' · '+(activeRecord.detail?.note||'Preparing geometry…'):''):'';
- $('modelBadge').title='LOD 400/500 use reference-inspired materials. Added markings and hardware are illustrative, not surveyed attributes.';
+ $('modelBadge').textContent=state.mode==='replica'?`LOD${state.lod}`:'';
+ $('lod').setAttribute('aria-valuetext','LOD'+state.lod);
 $('removedReadout').textContent='Points Removed: '+(o.sourceCount-activeRecord.count).toLocaleString('en-US');$('countReadout').textContent='Points Remaining: '+activeRecord.count.toLocaleString('en-US');$('volumeControls').hidden=state.measure!=='volume';
-  $('pickHint').textContent=state.measure!=='off'?(activeRecord.count?'Rotation paused · click '+(state.measure==='volume'?'at least three polygon corners':state.measure==='polyline'?'successive points along a polyline':state.mode==='points'?'two points':'the model surface'):'No points to measure.'):'';
+  $('pickHint').textContent=state.measure!=='off'?(activeRecord.count?'Click '+(state.measure==='volume'?'at least three polygon corners':state.measure==='polyline'?'successive points along a polyline':state.mode==='points'?'two points':'the model surface'):'No points to measure.'):'';
  document.querySelectorAll('[data-method]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.method===state.method));document.querySelectorAll('[data-object]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.object)===state.object));syncExtentControls();}
 let extentDrawing=false,extentPolygon=[],extentView=null,extentPending=null,extentSelection=null,extentExportPending=null,extentSerial=0;
 let builtinWorker=null,builtinWorkerURL=null,builtinWorkerObject=-1;
@@ -1530,7 +1534,7 @@ $('reset').addEventListener('click',()=>{const o=objects[state.object];state.ele
 $('replica').addEventListener('click',safe(()=>{state.mode=state.mode==='replica'?'points':'replica';upload();}));
 for(const [id,key] of [['colorToggle','color'],['intensityToggle','intensity']])$(id).addEventListener('click',()=>{state[key]=!state[key];syncUI();render();});
 $('showFit').addEventListener('click',safe(()=>{state.showFit=!state.showFit;upload(false);}));
-$('lod').addEventListener('change',safe(e=>{state.lod=Number(e.target.value);upload();}));
+$('lod').addEventListener('input',safe(e=>{state.lod=Number(e.target.value);upload();}));
 $('measure').addEventListener('change',e=>{state.measure=e.target.value;measurements=[];if(state.measure!=='off')state.playing=false;syncUI();render();});
 $('clear').addEventListener('click',()=>{measurements=[];syncUI();render();});$('undo').addEventListener('click',()=>{measurements.pop();syncUI();render();});
 let drag=null;
@@ -1709,10 +1713,75 @@ const dsmResolutions=[.1,.15,.3],dsmResolutionLabels=['10.00 cm','15.00 cm','30.
 let dsmWorker=null,dsmWorkerURL=null,dsmResult=null,dsmJob=0,dsmBusy=false,dsmPending=false,dsmTimer=null;
 let dsmImage=null,dsmPixels=null,dsmCamera={zoom:1,x:0,y:0,angle:0},dsmTransform=null;
 const dsmUnitFactors={cm:100,m:1};
+// Animate only the displayed raster. Statistical results and final masks remain
+// the exact RMSE or population Sigma result returned by the assessment worker.
+let dsmTransition=null,dsmTransitionFrame=0;
+function cancelDSMTransition(){cancelAnimationFrame(dsmTransitionFrame);dsmTransitionFrame=0;dsmTransition=null;}
+function presentedDSMImage(now=performance.now()){
+ if(!dsmTransition)return dsmImage;
+ const t=dsmTransition,p=Math.max(0,Math.min(1,(now-t.start)/1000)),alpha=p*p*(3-2*p),ctx=t.canvas.getContext('2d');
+ ctx.clearRect(0,0,t.canvas.width,t.canvas.height);
+ ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1-alpha;ctx.drawImage(t.from,0,0);
+ ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;ctx.drawImage(t.to,0,0);
+ ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+ return t.canvas;
+}
+function captureDSMImage(){
+ const current=presentedDSMImage();if(!current)return null;
+ const copy=document.createElement('canvas');copy.width=current.width;copy.height=current.height;copy.getContext('2d').drawImage(current,0,0);return copy;
+}
+function startDSMTransition(from,to){
+ const canvas=document.createElement('canvas');canvas.width=to.width;canvas.height=to.height;
+ dsmTransition={from,to,canvas,start:performance.now()};
+ function tick(now){
+  if(!dsmTransition)return;
+  if(now-dsmTransition.start>=1000){dsmTransition=null;dsmTransitionFrame=0;drawDSMMap();return;}
+  drawDSMMap();dsmTransitionFrame=requestAnimationFrame(tick);
+ }
+ dsmTransitionFrame=requestAnimationFrame(tick);
+}
+
+// The top-down map measures horizontal distance in source coordinates converted
+// to meters by the worker. View rotation, zoom and raster display reduction do
+// not change the endpoints or distance.
+let dsmMeasuring=false,dsmMeasurementPoints=[];
+function dsmMapPoint(clientX,clientY){
+ if(!dsmResult||!dsmPixels||!dsmTransform)return null;
+ const rect=$('dsmMap').getBoundingClientRect(),t=dsmTransform,p=dsmPixels,dx=clientX-rect.left-t.cx,dy=clientY-rect.top-t.cy,c=Math.cos(t.angle),s=Math.sin(t.angle);
+ const x=(c*dx+s*dy)/t.scale+p.width/2,y=(-s*dx+c*dy)/t.scale+p.height/2;
+ if(x<0||y<0||x>=p.width||y>=p.height||!p.counts[Math.floor(y)*p.width+Math.floor(x)])return null;
+ const r=dsmResult;
+ return [(r.bounds[0]+x*p.factor)*r.resolution,(r.bounds[3]+1-y*p.factor)*r.resolution];
+}
+function dsmPointScreen(point){
+ const r=dsmResult,p=dsmPixels,t=dsmTransform,c=Math.cos(t.angle),s=Math.sin(t.angle);
+ const dx=((point[0]/r.resolution-r.bounds[0])/p.factor-p.width/2)*t.scale,dy=((r.bounds[3]+1-point[1]/r.resolution)/p.factor-p.height/2)*t.scale;
+ return [t.cx+c*dx-s*dy,t.cy+s*dx+c*dy];
+}
+function addDSMMeasurement(clientX,clientY){
+ if(!dsmMeasuring)return false;
+ const point=dsmMapPoint(clientX,clientY);if(!point)return false;
+ if(dsmMeasurementPoints.length===2)dsmMeasurementPoints=[];
+ dsmMeasurementPoints.push(point);drawDSMMeasurements();return true;
+}
+function drawDSMMeasurements(){
+ const svg=$('dsmMeasureOverlay'),map=$('dsmMap');svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${map.clientWidth} ${map.clientHeight}`);
+ if(!dsmMeasuring||!dsmImage||!dsmTransform)return;
+ const screen=dsmMeasurementPoints.map(dsmPointScreen);
+ const element=(tag,attrs)=>{const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,v);svg.append(node);return node;};
+ if(screen.length===2){
+  const [a,b]=screen;
+  element('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'#99d9ff','stroke-width':2});
+  const label=element('text',{x:(a[0]+b[0])/2,y:(a[1]+b[1])/2-10,'text-anchor':'middle',class:'measurement-label'});
+  label.textContent=dsmNumber(Math.hypot(dsmMeasurementPoints[1][0]-dsmMeasurementPoints[0][0],dsmMeasurementPoints[1][1]-dsmMeasurementPoints[0][1]));
+ }
+ for(const p of screen)element('circle',{cx:p[0],cy:p[1],r:4,fill:'#c7edff',stroke:'#11283b','stroke-width':2});
+}
+
 function selectedUnit(id){return Number($(id).value)===1?'cm':'m';}
 function dsmNumber(value,power=1){
  if(value===null||!Number.isFinite(value))return 'N/A';
- if(power===0)return value.toLocaleString('en-US',{maximumFractionDigits:0});
+ if(power===0)return value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
  const unit=selectedUnit('dsmMetricUnits'),v=value*dsmUnitFactors[unit]**power;
  const rounded=Math.abs(v)<.005?0:v;
  return rounded.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+unit+({1:'',2:'²',3:'³'}[power]);
@@ -1725,17 +1794,17 @@ function createDSMWorker(){
  const code=atob($('lazDecoderJS').textContent)+'\nconst LAZ_WASM='+JSON.stringify($('lazDecoderWASM').textContent.trim())+';\n'+$('temporaryWorkerCode').textContent+'\n'+$('dsmWorkerCode').textContent;
  const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));return {worker:new Worker(url),url};
 }
-function dsmViewOptions(){return {sigmaCm:Number($('dsmNoise').value),filter:$('dsmFilter').checked,cpMetric:$('dsmCPMetric').value,uncertainty:$('dsmUncertainty').value};}
+function dsmViewOptions(){return {sigmaCm:Number($('dsmNoise').value),filter:$('dsmFilter').checked,cpMetric:Number($('dsmCPMetric').value)===1?'sigma':'rmse',uncertainty:$('dsmUncertainty').value};}
 function dsmSetStatus(text,error=false){
  const busy=dsmBusy&&!error;$('dsmStatus').textContent=busy?'Loading...':text;$('dsmStatus').dataset.error=String(error);$('dsmStatus').dataset.loading=String(busy);
- $('dsmLoading').hidden=!busy;$('dsmMap').setAttribute('aria-busy',String(busy));
+ $('dsmLoading').hidden=!busy||!!dsmResult;$('dsmMap').setAttribute('aria-busy',String(busy));
  if(error){$('dsmErrorMessage').textContent=text;if(!$('dsmErrorDialog').open)$('dsmErrorDialog').showModal();}
 }
 function stopDSM(message='Analysis canceled.'){
- clearTimeout(dsmTimer);dsmJob++;dsmWorker?.terminate();if(dsmWorkerURL)URL.revokeObjectURL(dsmWorkerURL);dsmWorker=null;dsmWorkerURL=null;dsmBusy=false;dsmPending=false;$('dsmCancel').disabled=true;dsmSetStatus(message);
+ clearTimeout(dsmTimer);cancelDSMTransition();dsmJob++;dsmWorker?.terminate();if(dsmWorkerURL)URL.revokeObjectURL(dsmWorkerURL);dsmWorker=null;dsmWorkerURL=null;dsmBusy=false;dsmPending=false;$('dsmCancel').disabled=true;dsmSetStatus(message);
 }
 function resetDSMDisplay(){
- dsmResult=null;dsmImage=null;dsmPixels=null;dsmTransform=null;$('dsmMetrics').replaceChildren();$('dsmScaleMin').textContent='−';$('dsmScaleMax').textContent='+';$('dsmMapReadout').textContent='Cell Value: N/A';drawDSMMap();drawDSMHistogram();
+ dsmMeasurementPoints=[];cancelDSMTransition();dsmResult=null;dsmImage=null;dsmPixels=null;dsmTransform=null;$('dsmMetrics').replaceChildren();$('dsmScaleMin').textContent='−';$('dsmScaleMax').textContent='+';$('dsmMapReadout').textContent='Cell Value: N/A';drawDSMMap();drawDSMHistogram();
 }
 function startDSM(){
  clearTimeout(dsmTimer);const pre=$('dsmPre').files[0],post=$('dsmPost').files[0];
@@ -1754,8 +1823,9 @@ function startDSM(){
   if(m.type==='dsmError'){dsmPending=false;resetDSMDisplay();dsmSetStatus(m.message,true);return;}
   if(m.type!=='dsmResult')return;
   if(dsmPending){dsmPending=false;updateDSMView();return;}
-  dsmResult=m;makeDSMImage();drawDSMMap();drawDSMHistogram();showDSMMetrics();
-  $('dsmMapReadout').textContent='Cell Value: N/A';dsmSetStatus('Assessment complete.');
+  const animate=!!dsmResult&&dsmResult.cpMetric!==m.cpMetric;
+  dsmResult=m;makeDSMImage(animate);drawDSMMap();drawDSMHistogram();showDSMMetrics();
+  $('dsmMapReadout').textContent='Cell Value: N/A';dsmSetStatus('');
  };
  const source=selectedUnit('dsmUnits'),options={resolution:dsmResolutions[Number($('dsmResolution').value)],radius:1,checkpointRadius:.30,units:source,vertical:source};
  worker.postMessage({type:'dsmBuild',id:++dsmJob,pre,post,cpPre:$('dsmCPPre').files[0]||null,cpPost:$('dsmCPPost').files[0]||null,options,view:dsmViewOptions()});
@@ -1793,8 +1863,9 @@ function updateDSMPalettePreview(){
  $('dsmPalettePreview').setAttribute('aria-label',label);$('dsmPalettePreview').title=label;
 }
 function clearDSMReadout(){$('dsmMapReadout').textContent='Cell Value: N/A';}
-function makeDSMImage(){
+function makeDSMImage(animate=false){
  if(!dsmResult)return;
+ const previous=animate?captureDSMImage():null;cancelDSMTransition();
  const r=dsmResult,layer=$('dsmLayer').value,field={survey1:9,survey2:10,dod:2,propagated:2}[layer],survey=layer.startsWith('survey'),filtered=layer==='propagated';
  const nx=r.bounds[2]-r.bounds[0]+1,ny=r.bounds[3]-r.bounds[1]+1,factor=Math.max(1,Math.ceil(Math.max(nx,ny)/1400)),width=Math.ceil(nx/factor),height=Math.ceil(ny/factor),size=width*height;
  const sums=new Float64Array(size),counts=new Uint32Array(size);let min=Infinity,max=-Infinity;
@@ -1814,7 +1885,8 @@ function makeDSMImage(){
   const t=span?(sums[j]/counts[j]-min)/span:.5,color=ramp[Math.max(0,Math.min(1023,Math.round(t*1023)))];
   data.data.set([...color,255],j*4);
  }
- ctx.putImageData(data,0,0);dsmImage=image;dsmPixels={width,height,sums,counts,factor,field};
+ ctx.putImageData(data,0,0);dsmImage=image;
+ if(previous&&previous.width===width&&previous.height===height)startDSMTransition(previous,image);dsmPixels={width,height,sums,counts,factor,field};
  updateDSMPalettePreview();
  $('dsmScaleMin').textContent=hasValues?dsmNumber(min):'N/A';$('dsmScaleMax').textContent=hasValues?dsmNumber(max):'N/A';
  $('dsmMapTitle').textContent=$('dsmLayer').selectedOptions[0].textContent;
@@ -1834,16 +1906,12 @@ function drawDSMMap(){
  const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#090e16';ctx.fillRect(0,0,w,h);
  const angle=dsmCamera.angle;document.querySelector('.map-north').style.transform='rotate('+angle+'rad)';
  document.querySelector('.map-north').setAttribute('aria-label','North, '+(((angle*180/Math.PI)%360+360)%360).toFixed(0)+' degrees clockwise from screen up');
- if(!dsmImage){$('dsmScaleBar').hidden=true;dsmTransform=null;ctx.fillStyle='#acb8c9';ctx.font='14px system-ui';ctx.textAlign='center';ctx.fillText('Load two point clouds to inspect elevation change.',w/2,h*.65);return;}
+ if(!dsmImage){drawDSMMeasurements();$('dsmScaleBar').hidden=true;dsmTransform=null;ctx.fillStyle='#acb8c9';ctx.font='14px system-ui';ctx.textAlign='center';ctx.fillText('Load two point clouds to inspect elevation change.',w/2,h*.65);return;}
  const scale=Math.max(.001,Math.min((w-40)/dsmImage.width,(h-50)/dsmImage.height))*dsmCamera.zoom,cx=w/2+dsmCamera.x,cy=h/2+dsmCamera.y;
  dsmTransform={cx,cy,scale,angle};ctx.imageSmoothingEnabled=false;ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);ctx.scale(scale,scale);
- ctx.drawImage(dsmImage,-dsmImage.width/2,-dsmImage.height/2);ctx.restore();drawDSMScale(scale);
+ ctx.drawImage(presentedDSMImage(),-dsmImage.width/2,-dsmImage.height/2);ctx.restore();drawDSMScale(scale);drawDSMMeasurements();
 }
-function thresholdNumber(value){
- if(value===null||!Number.isFinite(value))return 'N/A';
- const unit=selectedUnit('dsmMetricUnits'),v=value*dsmUnitFactors[unit];
- return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:6})+' '+unit;
-}
+function thresholdNumber(value){return dsmNumber(value);}
 // Build notation from text nodes so source labels cannot inject HTML.
 function setScientificText(element,value){
  const text=String(value),pattern=/LoD95%|RMSEz|Sigmaz|Mean Bias z/g;let start=0;
@@ -1911,26 +1979,19 @@ function showDSMMetrics(){
  }
  const metrics=[['No. of Cells','n',0],['Mean','mean',1],['RMSE','rmse',1],['Sigma','sigma',1],['Median','median',1],['Minimum','min',1],['Maximum','max',1],['Coverage Area','area',2],['Net Volume','netVolume',3]];
  table('DoD Metrics',['Metric','DoD (Standard)',...(r.filter?['DoD with Error Propagation']:[])],metrics.map(([label,k,p])=>[label,dsmNumber(r.raw[k],p),...(r.filter?[dsmNumber(r.screened[k],p)]:[])]));
- table('Vertical Accuracy Metrics Relative to Checkpoints',['Survey','Valid Points / Total Points','RMSEz','Sigmaz','Mean Bias z'],r.checkpoints.map((c,i)=>['Survey '+(i+1),c.n+' / '+c.rows.length,dsmNumber(c.rmse),dsmNumber(c.sigma),dsmNumber(c.mean)]));
- const cpAvailable=Number.isFinite(r.checkpointThreshold),metric=r.cpMetric==='sigma'?'Sigmaz':'RMSEz';
+ table('Accuracy Metrics (Relative to Checkpoints)',['Survey','Valid Points / Total Points','RMSEz','Sigmaz','Mean Bias z'],r.checkpoints.map((c,i)=>['Survey '+(i+1),dsmNumber(c.n,0)+' / '+dsmNumber(c.rows.length,0),dsmNumber(c.rmse),dsmNumber(c.sigma),dsmNumber(c.mean)]));
+ const metric=r.cpMetric==='sigma'?'Sigmaz':'RMSEz';
  const rows=[['Method',r.uncertainty==='m3c2'?'Spatially Varying M3C2 LoD95%':'Uniform Checkpoint Accuracy'],['Vertical Checkpoint Metric',metric],['Thresholds Applied',r.filter?'Yes':'No']];
  for(let i=0;i<2;i++)rows.push(['Survey '+(i+1)+' '+metric,thresholdNumber(r.checkpoints[i][r.cpMetric])]);
  if(r.uncertainty==='m3c2'){
   rows.push(['Minimum Threshold',thresholdNumber(r.thresholds.min)],['Mean Threshold',thresholdNumber(r.thresholds.mean)],['Maximum Threshold',thresholdNumber(r.thresholds.max)]);
  }else rows.push(['Uniform Threshold',thresholdNumber(r.checkpointThreshold)]);
- rows.push(['Paired Cells',dsmNumber(r.overlap,0)],['Cells Above Threshold',dsmNumber(r.significant,0)],['Cells At or Below Threshold',dsmNumber(r.evaluated-r.significant,0)],['Cells Without a Valid Threshold',dsmNumber(r.overlap-r.evaluated,0)]);
+ rows.push(['Paired Cells',dsmNumber(r.overlap,0)],['Cells Above Threshold',dsmNumber(r.significant,0)],['Cells at or Below Threshold',dsmNumber(r.evaluated-r.significant,0)],['Cells Without a Valid Threshold',dsmNumber(r.overlap-r.evaluated,0)]);
  table('Error Thresholds (95% CL)',['Metric','Value'],rows);
- const p=document.createElement('p');p.id='dsmThresholdSummary';
- p.textContent=r.uncertainty==='m3c2'?'LoD95% = 1.96 × (√(σ₁²/n₁ + σ₂²/n₂) + √(e₁² + e₂²)), using population local variances. Vertical neighborhoods use a radius of '+thresholdNumber(r.radius)+'.'+(cpAvailable?'':Number.isFinite(r.registration)?' No checkpoints are supplied; thresholds use local sampling uncertainty only.':' Checkpoint support is insufficient; thresholds are unavailable.'):'Threshold = 1.96 × √(e₁² + e₂²), using each survey’s checkpoint '+metric+'.';
- p.textContent+=r.filter?' Retain only |Δz| > threshold; equality and unavailable thresholds are masked.':' Filtering is off; the standard DoD includes all paired cells.';
- setScientificText(p,p.textContent);
- root.append(p);
  const comparisonMetrics=['rmse','sigma'];
  table('Checkpoint Metric Comparison',['Metric',...comparisonMetrics.map(k=>(k==='rmse'?'RMSEz':'Sigmaz')+(k===r.cpMetric?' (Selected)':''))],
   [['Minimum Threshold',c=>thresholdNumber(c.thresholds.min)],['Maximum Threshold',c=>thresholdNumber(c.thresholds.max)],['Retained Cells',c=>dsmNumber(c.significant,0)],['Masked Cells',c=>dsmNumber(c.masked,0)],['Without a Valid Threshold',c=>dsmNumber(c.unassessed,0)]].map(([label,value])=>[label,...comparisonMetrics.map(k=>value(r.metricComparison[k]))]));
- const note=document.createElement('p');note.id='dsmComparisonNote';
- note.textContent='Comparison uses the current uncertainty method and the same paired cells. Counts show the result of applying each threshold, including when filtering is off. Masked counts include cells without a valid threshold.';
- root.append(note);
+
 }
 function showDSMCell(clientX,clientY){
  if(!dsmResult||!dsmPixels||!dsmTransform){clearDSMReadout();return;}
@@ -1940,7 +2001,8 @@ function showDSMCell(clientX,clientY){
  const j=y*p.width+x;
  $('dsmMapReadout').textContent='Cell Value: '+(p.counts[j]?dsmNumber(p.sums[j]/p.counts[j]):'N/A');
 }
-for(const id of ['dsmUncertainty','dsmCPMetric'])enhanceScientificSelect(id);
+enhanceScientificSelect('dsmUncertainty');
+$('dsmCPMetric').addEventListener('input',()=>{$('dsmCPMetric').setAttribute('aria-valuetext',Number($('dsmCPMetric').value)===1?'Sigma z':'RMSE z');});
 $('dsmRun').addEventListener('click',startDSM);
 $('dsmCancel').addEventListener('click',()=>{stopDSM();resetDSMDisplay();});
 for(const id of ['dsmPre','dsmPost','dsmCPPre','dsmCPPost'])$(id).addEventListener('change',scheduleDSM);
@@ -1958,18 +2020,22 @@ $('dsmLayer').addEventListener('change',()=>{
  else{makeDSMImage();drawDSMMap();}
 });
 for(const id of ['dsmPalette','dsmColorblind'])$(id).addEventListener('change',()=>{updateDSMPalettePreview();makeDSMImage();drawDSMMap();});
+$('dsmMeasure').addEventListener('click',()=>{dsmMeasuring=!dsmMeasuring;dsmMeasurementPoints=[];$('dsmMeasure').textContent='Measure Distances: '+(dsmMeasuring?'On':'Off');$('dsmMeasure').setAttribute('aria-pressed',String(dsmMeasuring));drawDSMMeasurements();});
 $('dsmResetMap').addEventListener('click',()=>{dsmCamera={zoom:1,x:0,y:0,angle:0};clearDSMReadout();drawDSMMap();});
 let dsmDrag=null;
 $('dsmMap').addEventListener('contextmenu',e=>e.preventDefault());
 $('dsmMap').addEventListener('pointerdown',e=>{
  if(!dsmImage)return;e.preventDefault();
- dsmDrag={id:e.pointerId,x:e.clientX,y:e.clientY,pan:e.shiftKey||e.button!==0};e.target.setPointerCapture(e.pointerId);clearDSMReadout();
+ dsmDrag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false,measure:dsmMeasuring&&e.button===0&&!e.shiftKey,pan:e.shiftKey||e.button!==0};e.target.setPointerCapture(e.pointerId);clearDSMReadout();
 });
-function endDSMDrag(e){if(dsmDrag?.id!==e.pointerId)return;dsmDrag=null;if(e.target.hasPointerCapture(e.pointerId))e.target.releasePointerCapture(e.pointerId);}
+function endDSMDrag(e){if(dsmDrag?.id!==e.pointerId)return;const pick=e.type==='pointerup'&&dsmDrag.measure&&!dsmDrag.moved;dsmDrag=null;if(e.target.hasPointerCapture(e.pointerId))e.target.releasePointerCapture(e.pointerId);if(pick)addDSMMeasurement(e.clientX,e.clientY);}
 $('dsmMap').addEventListener('pointerup',endDSMDrag);$('dsmMap').addEventListener('pointercancel',endDSMDrag);$('dsmMap').addEventListener('lostpointercapture',()=>dsmDrag=null);
 $('dsmMap').addEventListener('pointermove',e=>{
  if(dsmDrag){
-  if(dsmDrag.id!==e.pointerId)return;const dx=e.clientX-dsmDrag.x,dy=e.clientY-dsmDrag.y;
+  if(dsmDrag.id!==e.pointerId)return;
+  if(!dsmDrag.moved&&Math.hypot(e.clientX-dsmDrag.startX,e.clientY-dsmDrag.startY)>4)dsmDrag.moved=true;
+  if(dsmDrag.measure&&!dsmDrag.moved)return;
+  const dx=e.clientX-dsmDrag.x,dy=e.clientY-dsmDrag.y;
   if(dsmDrag.pan){dsmCamera.x+=dx;dsmCamera.y+=dy;}else dsmCamera.angle=((dsmCamera.angle+(dx+dy)*Math.PI/360)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
   dsmDrag.x=e.clientX;dsmDrag.y=e.clientY;drawDSMMap();return;
  }
